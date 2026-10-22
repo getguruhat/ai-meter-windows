@@ -11,7 +11,7 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap desktop rescap">
-  <Identity Name="GuruHat.AIMeter" Publisher="CN=GuruHat" Version="0.0.0.0" ProcessorArchitecture="x64" />
+  <Identity Name="GuruHat.AIMeter" Publisher="CN=05CD3C36-E7B1-44AF-9610-697D5FFE04B6" Version="0.0.0.0" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>AI Meter</DisplayName>
     <PublisherDisplayName>GuruHat</PublisherDisplayName>
