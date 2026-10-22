@@ -1,0 +1,95 @@
+name: Build Windows installer
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish application
+        run: dotnet publish AIMeter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $app = Start-Process publish/AIMeter.exe -ArgumentList '--smoke-test' -PassThru -Wait
+          Get-Content smoke-test.log
+          if ($app.ExitCode -ne 0) { throw "Smoke test failed: $($app.ExitCode)" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tray-icon-previews
+          path: screenshots/*.png
+      # The Microsoft Store version. It's uploaded unsigned: the Store signs it when it publishes.
+      - name: Build MSIX package
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content AIMeter.csproj)).Project.PropertyGroup.Version
+          $sdk = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*" | Sort-Object { [version]$_.Name } | Select-Object -Last 1
+          "$sdk\x64" | Out-File $env:GITHUB_PATH -Append
+          New-Item -ItemType Directory msix-layout, dist -Force | Out-Null
+          Copy-Item publish\* msix-layout -Recurse
+          Copy-Item msix\Assets msix-layout -Recurse
+          $manifest = [xml](Get-Content msix\AppxManifest.xml)
+          $manifest.Package.Identity.Version = "$version.0"
+          $manifest.Save("$PWD\msix-layout\AppxManifest.xml")
+          & "$sdk\x64\makeappx.exe" pack /d msix-layout /p "dist\AI-Meter-$version-x64.msix" /o
+          if ($LASTEXITCODE -ne 0) { throw "makeappx failed" }
+      # Signs a copy with a throwaway certificate, installs it, and checks the app starts.
+      - name: Test-install MSIX package
+        shell: pwsh
+        run: |
+          $msix = (Get-Item dist\*.msix).FullName
+          $publisher = ([xml](Get-Content msix\AppxManifest.xml)).Package.Identity.Publisher
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $publisher -CertStoreLocation Cert:\CurrentUser\My -TextExtension @("2.5.29.19={text}")
+          $password = ConvertTo-SecureString -String "test" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath test.pfx -Password $password | Out-Null
+          Import-PfxCertificate -FilePath test.pfx -CertStoreLocation Cert:\LocalMachine\TrustedPeople -Password $password | Out-Null
+          Copy-Item $msix test.msix
+          signtool sign /fd SHA256 /f test.pfx /p test test.msix
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+          Add-AppxPackage test.msix
+          $package = Get-AppxPackage -Name ([xml](Get-Content msix\AppxManifest.xml)).Package.Identity.Name
+          if (-not $package) { throw "MSIX did not install" }
+          "Installed $($package.PackageFullName)"
+          # Launching through the shell can fail on a runner with no desktop session, so this only warns.
+          Start-Process "shell:AppsFolder\$($package.PackageFamilyName)!AIMeter" -ErrorAction SilentlyContinue
+          Start-Sleep 10
+          $app = Get-Process AIMeter -ErrorAction SilentlyContinue
+          if ($app) {
+            "AI Meter is running from the package (pid $($app.Id))"
+            $app | Stop-Process -Force
+          } else { "::warning::AI Meter did not start from the MSIX package on the runner" }
+          Remove-AppxPackage $package.PackageFullName
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AI-Meter-Windows-msix
+          path: dist/*.msix
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
+      # The versioned installer, plus a copy under a fixed name so
+      # releases/latest/download/AI-Meter-Windows-Setup.exe keeps working.
+      - name: Copy installer to fixed name
+        shell: pwsh
+        run: Copy-Item (Get-Item dist/AI-Meter-*-Windows-Setup.exe).FullName dist/AI-Meter-Windows-Setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AI-Meter-Windows-installer
+          path: dist/AI-Meter-*-Windows-Setup.exe
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: gh release create $env:GITHUB_REF_NAME (Get-Item dist/*.exe).FullName --title "AI Meter for Windows $($env:GITHUB_REF_NAME.TrimStart('v'))" --notes-file RELEASE_NOTES.md

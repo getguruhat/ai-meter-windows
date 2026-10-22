@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MSIX package for the Microsoft Store. The Store signs the package when it publishes it.
+  Identity Name and Publisher, and PublisherDisplayName, must match Partner Center's
+  Product management › Product identity page for the MSIX app. The build fills in Version
+  from AIMeter.csproj.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+  <Identity Name="GuruHat.AIMeter" Publisher="CN=GuruHat" Version="0.0.0.0" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>AI Meter</DisplayName>
+    <PublisherDisplayName>GuruHat</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Applications>
+    <Application Id="AIMeter" Executable="AIMeter.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="AI Meter"
+        Description="Your remaining Claude Code or Codex usage, right on the Windows taskbar."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <!-- "Start with Windows". Off until the user turns it on from the right-click menu. -->
+        <desktop:Extension Category="windows.startupTask" Executable="AIMeter.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="AIMeterStartup" Enabled="false" DisplayName="AI Meter" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
