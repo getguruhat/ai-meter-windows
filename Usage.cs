@@ -12,7 +12,8 @@ internal sealed record Reading(int Remaining, DateTime? Reset);
 
 /// What one usage check produced: a reading, or why there isn't one (and, when the
 /// provider asked us to back off, when to try again).
-internal sealed record Outcome(Reading? Reading, string? Problem = null, DateTime? RetryAt = null);
+/// SignIn marks a missing or expired sign-in, so the panel can link to the troubleshooting guide.
+internal sealed record Outcome(Reading? Reading, string? Problem = null, DateTime? RetryAt = null, bool SignIn = false);
 
 /// Reads the sign-in that the Codex CLI or Claude Code already saved, and asks that
 /// provider (and only that provider) how much of the current usage window is left.
@@ -23,7 +24,7 @@ internal static class Usage
     private static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("AI-Meter/1.0.1 (Windows)");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("AI-Meter/1.0.2 (Windows)");
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return client;
     }
@@ -42,7 +43,7 @@ internal static class Usage
     {
         var auth = ReadFile(Path.Combine(ConfigDir("CODEX_HOME", ".codex"), "auth.json"));
         var (token, account) = ParseCodexAuth(auth);
-        if (token is null) return new Outcome(null, "No Codex sign-in found. Run codex and sign in with ChatGPT.");
+        if (token is null) return new Outcome(null, "No Codex sign-in found. Run codex and sign in with ChatGPT.", SignIn: true);
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://chatgpt.com/backend-api/wham/usage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Add("ChatGPT-Account-Id", account ?? "");
@@ -73,17 +74,17 @@ internal static class Usage
     {
         var credentialsFile = Path.Combine(ConfigDir("CLAUDE_CONFIG_DIR", ".claude"), ".credentials.json");
         var (token, expires) = ParseClaudeCredentials(ReadFile(credentialsFile));
-        if (token is null) return new Outcome(null, "No Claude Code sign-in found. Sign in to Claude Code first.");
+        if (token is null) return new Outcome(null, "No Claude Code sign-in found in a terminal. Signing in to the Claude app isn't enough.", SignIn: true);
         // Claude Code renews its sign-in only while it runs, and the desktop app keeps a
         // separate one, so the saved token often expires. Asking with it would just spend
         // the usage endpoint's small request allowance, so renew it first.
         if (expires is { } e && e < DateTime.Now)
         {
             if (!await RenewClaudeSignInAsync())
-                return new Outcome(null, $"Claude sign-in expired at {e:h:mm tt}. Run claude in a terminal once to renew it.");
+                return new Outcome(null, $"Claude sign-in expired at {e:h:mm tt}. Run claude in a terminal once to renew it.", SignIn: true);
             (token, expires) = ParseClaudeCredentials(ReadFile(credentialsFile));
             if (token is null || expires < DateTime.Now)
-                return new Outcome(null, $"Claude sign-in expired at {e:h:mm tt}. Run claude in a terminal once to renew it.");
+                return new Outcome(null, $"Claude sign-in expired at {e:h:mm tt}. Run claude in a terminal once to renew it.", SignIn: true);
         }
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/api/oauth/usage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -156,7 +157,7 @@ internal static class Usage
             var until = now + wait;
             return new Outcome(null, RateLimitText(provider, until), until);
         }
-        if (status is 401 or 403) return new Outcome(null, expired);
+        if (status is 401 or 403) return new Outcome(null, expired, SignIn: true);
         return new Outcome(null, $"Couldn't get usage from {provider}. Trying again in 5 minutes.");
     }
 

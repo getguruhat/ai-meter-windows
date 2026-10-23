@@ -1,9 +1,14 @@
 AI Meter shows how much of your Claude Code or Codex usage is left, right on the Windows taskbar, along with when it resets.
 
 **Install**
-1. Download `AI-Meter-1.0.1-Windows-Setup.exe` below and run it. No administrator rights needed.
+1. Download `AI-Meter-1.0.2-Windows-Setup.exe` below and run it. No administrator rights needed.
 2. If Windows SmartScreen says it protected your PC, choose **More info › Run anyway**. The installer isn't code-signed yet.
 3. Click "AI %" on the taskbar and pick **Claude** or **Codex**.
+
+**What's new in 1.0.2**
+- Larger "AI 79%" text on the taskbar, about 30% bigger, so it's easier to read at a glance
+- When AI Meter can't find your Claude Code or Codex sign-in, the panel now links straight to the [troubleshooting guide](https://guruhat.com/apps/ai-meter/troubleshooting/), which walks you through signing in from a terminal
+- Clearer message: signing in to the Claude app isn't enough, because AI Meter reads the sign-in saved by `claude` in a terminal
 
 **What's new in 1.0.1**
 - A much smaller download: about 2 MB instead of 175 MB. AI Meter now uses the .NET Framework that comes with Windows instead of bundling its own runtime

@@ -6,7 +6,7 @@ using Timer = System.Windows.Forms.Timer;
 
 namespace AIMeter;
 
-internal sealed record PanelState(Provider Provider, Reading? Reading, string? Problem);
+internal sealed record PanelState(Provider Provider, Reading? Reading, string? Problem, bool SignIn = false);
 
 /// Panel colors, following the Windows "app mode" light/dark setting.
 internal sealed record Theme(Color Back, Color Text, Color Secondary, Color Track, Color Selected, Color Hover, Color Line, Color Warning)
@@ -42,6 +42,7 @@ internal sealed class MeterPanel : Form
     private static extern bool SetForegroundWindow(IntPtr hwnd);
 
     private readonly Action<Provider> select;
+    private readonly Action troubleshooting;
     private readonly (string Glyph, string Tip, Action Click)[] buttons;
     private readonly List<(Rectangle Rect, string Tip, Action Click)> targets = [];
     private readonly ToolTip tip = new();
@@ -56,9 +57,10 @@ internal sealed class MeterPanel : Form
     private Point anchor;
     private DateTime hiddenAt;
 
-    public MeterPanel(Action<Provider> select, Action refresh, Action about, Action support, Action quit)
+    public MeterPanel(Action<Provider> select, Action refresh, Action about, Action support, Action quit, Action troubleshooting)
     {
         this.select = select;
+        this.troubleshooting = troubleshooting;
         // Segoe Fluent Icons ships with Windows 11; Windows 10 has the same glyphs in Segoe MDL2 Assets.
         using (var fonts = new InstalledFontCollection())
             iconFamily = fonts.Families.Any(f => f.Name == "Segoe Fluent Icons") ? "Segoe Fluent Icons" : "Segoe MDL2 Assets";
@@ -263,6 +265,16 @@ internal sealed class MeterPanel : Form
         }
 
         if (state.Problem is { } problem) y += S(10) + Line(g, problem, small!, theme.Warning, pad, y + S(10), inner);
+        if (state.SignIn)
+        {
+            // Links to the troubleshooting guide, like the macOS menu's link.
+            const string text = "Open the troubleshooting guide ›";
+            var size = TextRenderer.MeasureText(text, strong, Size.Empty, NoPad);
+            var link = new Rectangle(pad - S(6), y + S(6), size.Width + S(12), size.Height + S(8));
+            if (hover == Target(link, "", troubleshooting)) Fill(g, link, theme.Hover, S(6));
+            Write(g, text, strong!, link, theme.Text, NoPad | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            y = link.Bottom;
+        }
 
         y += S(14);
         if (g is not null) { using var pen = new Pen(theme.Line, Math.Max(1, scale)); g.DrawLine(pen, pad, y, pad + inner, y); }

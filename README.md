@@ -19,7 +19,7 @@ Windows 11 may hide new tray icons behind the **^** arrow. Drag AI Meter onto th
 
 ## Using it
 
-Click the tray icon to open the usage panel: switch between **Claude** and **Codex**, see the exact percentage, how long until the window resets and at what time, and refresh, open About, or quit. It follows your Windows light or dark mode. Right-click it for **Refresh now**, **Show AI % on the taskbar**, **Start with Windows**, and **Quit**. With the taskbar text off, or when the taskbar is vertical or auto-hidden, AI Meter shows the percentage as a tray icon instead. If it shows **–**, AI Meter couldn't find a sign-in for that provider or the provider changed its usage endpoint. Sign in to Claude Code or the Codex CLI, then refresh.
+Click the tray icon to open the usage panel: switch between **Claude** and **Codex**, see the exact percentage, how long until the window resets and at what time, and refresh, open About, or quit. It follows your Windows light or dark mode. Right-click it for **Refresh now**, **Show AI % on the taskbar**, **Start with Windows**, and **Quit**. With the taskbar text off, or when the taskbar is vertical or auto-hidden, AI Meter shows the percentage as a tray icon instead. If it shows **–**, AI Meter couldn't find a sign-in for that provider or the provider changed its usage endpoint. Sign in to Claude Code or the Codex CLI ([troubleshooting guide](https://guruhat.com/apps/ai-meter/troubleshooting/)), then refresh. When the problem is a missing or expired sign-in, the panel shows a **Troubleshooting** link to the same guide.
 
 ## Privacy
 

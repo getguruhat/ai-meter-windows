@@ -36,7 +36,7 @@ internal static class SmokeTest
             Check("429 honors Retry-After", limited?.RetryAt == now.AddSeconds(1597) && limited.Problem!.Contains("limiting"));
             Check("429 without Retry-After waits 15 minutes", Usage.Failure(429, null, Provider.Codex, "x", now)?.RetryAt == now.AddMinutes(15));
             Check("429 Retry-After capped at 2 hours", Usage.Failure(429, TimeSpan.FromHours(9), Provider.Codex, "x", now)?.RetryAt == now.AddHours(2));
-            Check("401 asks to sign in", Usage.Failure(401, null, Provider.Claude, "expired", now) is { Problem: "expired", RetryAt: null });
+            Check("401 asks to sign in", Usage.Failure(401, null, Provider.Claude, "expired", now) is { Problem: "expired", RetryAt: null, SignIn: true });
             Check("500 is temporary", Usage.Failure(500, null, Provider.Codex, "x", now) is { RetryAt: null } o && o.Problem!.Contains("Trying again"));
 
             Check("Reset in hours", Usage.ResetText(now.AddHours(2).AddMinutes(14), now) is ("Resets in 2 h 14 min", var at) && at.StartsWith("today at"));
@@ -84,12 +84,12 @@ internal static class SmokeTest
                     Check($"Taskbar label {name}", bitmap.GetPixel(0, 0).A == 1 && bitmap.Width > bitmap.Height && ink.Count > 0 && ink.All(p => light ? p.R <= 5 : p.R >= 250));
                 }
 
-            using var panel = new MeterPanel(_ => { }, () => { }, () => { }, () => { }, () => { });
+            using var panel = new MeterPanel(_ => { }, () => { }, () => { }, () => { }, () => { }, () => { });
             var previews = new (string Name, PanelState State)[]
             {
                 ("reading", new PanelState(Provider.Claude, new Reading(58, DateTime.Now.AddHours(2).AddMinutes(14)), null)),
                 ("low", new PanelState(Provider.Codex, new Reading(12, DateTime.Now.AddDays(2)), "Codex is limiting usage checks. Next check at 3:41 PM.")),
-                ("signed-out", new PanelState(Provider.Codex, null, "No Codex sign-in found. Run codex and sign in with ChatGPT."))
+                ("signed-out", new PanelState(Provider.Codex, null, "No Codex sign-in found. Run codex and sign in with ChatGPT.", SignIn: true))
             };
             foreach (var (name, previewState) in previews)
                 foreach (var (themeName, look) in new[] { ("light", Theme.Light), ("dark", Theme.Dark) })

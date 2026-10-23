@@ -204,6 +204,7 @@ internal static class MeterIcon
 internal sealed class MeterContext : ApplicationContext
 {
     private const string WebsiteUrl = "https://guruhat.com/apps/ai-meter/";
+    private const string TroubleshootingUrl = "https://guruhat.com/apps/ai-meter/troubleshooting/";
     private const string DonationUrl = "https://www.paypal.com/donate/?hosted_button_id=FHGYWD46722JS";
 
     private readonly Settings settings = Settings.Load();
@@ -216,6 +217,7 @@ internal sealed class MeterContext : ApplicationContext
     private readonly Timer timer = new() { Interval = 5 * 60 * 1000 };
     private Reading? reading;
     private string? problem;
+    private bool signIn;
     /// When a provider asked us to back off, no request is sent to it before this time.
     private readonly Dictionary<Provider, DateTime> retryAt = [];
     private Icon? icon;
@@ -224,7 +226,7 @@ internal sealed class MeterContext : ApplicationContext
     public MeterContext()
     {
         reading = settings.Cached(settings.Provider).Reading;
-        panel = new MeterPanel(Select, () => _ = RefreshAsync(), () => Open(WebsiteUrl), () => Open(DonationUrl), Quit);
+        panel = new MeterPanel(Select, () => _ = RefreshAsync(), () => Open(WebsiteUrl), () => Open(DonationUrl), Quit, () => Open(settings.Provider == Provider.Codex ? TroubleshootingUrl + "#codex" : TroubleshootingUrl));
         startup.Click += (_, _) => { Startup.Enabled = !Startup.Enabled; startup.Checked = Startup.Enabled; };
         taskbarText.Click += (_, _) =>
         {
@@ -273,6 +275,7 @@ internal sealed class MeterContext : ApplicationContext
         settings.Save();
         reading = settings.Cached(provider).Reading;
         problem = null;
+        signIn = false;
         Render();
         _ = RefreshAsync();
     }
@@ -287,6 +290,7 @@ internal sealed class MeterContext : ApplicationContext
             if (retryAt.TryGetValue(provider, out var until) && until > DateTime.Now)
             {
                 problem = Usage.RateLimitText(provider, until);
+                signIn = false;
                 Render();
                 return;
             }
@@ -296,12 +300,14 @@ internal sealed class MeterContext : ApplicationContext
             {
                 reading = result;
                 problem = null;
+                signIn = false;
                 retryAt.Remove(provider);
                 settings.Store(provider, result, DateTime.Now);
             }
             else
             {
                 problem = outcome.Problem;
+                signIn = outcome.SignIn;
                 if (outcome.RetryAt is { } next) retryAt[provider] = next;
                 // A failed check keeps the last good reading, unless its window has already reset.
                 if (reading?.Reset is { } r && r < DateTime.Now) { reading = null; settings.Store(provider, null); }
@@ -313,7 +319,7 @@ internal sealed class MeterContext : ApplicationContext
 
     private void Render()
     {
-        panel.SetState(new PanelState(settings.Provider, reading, problem));
+        panel.SetState(new PanelState(settings.Provider, reading, problem, signIn));
         var summary = reading is null ? "unavailable" : $"{reading.Remaining}% left";
         if (reading?.Reset is { } when) summary += $", resets {Usage.ResetText(when, DateTime.Now).At}";
         var tip = $"AI Meter · {settings.Provider}: {summary}";
