@@ -226,7 +226,7 @@ internal sealed class MeterContext : ApplicationContext
     public MeterContext()
     {
         reading = settings.Cached(settings.Provider).Reading;
-        panel = new MeterPanel(Select, () => _ = RefreshAsync(), () => Open(WebsiteUrl), () => Open(DonationUrl), Quit, () => Open(settings.Provider == Provider.Codex ? TroubleshootingUrl + "#codex" : TroubleshootingUrl));
+        panel = new MeterPanel(Select, () => _ = RefreshAsync(), () => AboutWindow.ShowShared(() => Open(DonationUrl)), () => Open(DonationUrl), Quit, () => Open(settings.Provider == Provider.Codex ? TroubleshootingUrl + "#codex" : TroubleshootingUrl));
         startup.Click += (_, _) => { Startup.Enabled = !Startup.Enabled; startup.Checked = Startup.Enabled; };
         taskbarText.Click += (_, _) =>
         {

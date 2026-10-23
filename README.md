@@ -19,7 +19,7 @@ Windows 11 may hide new tray icons behind the **^** arrow. Drag AI Meter onto th
 
 ## Using it
 
-Click the tray icon to open the usage panel: switch between **Claude** and **Codex**, see the exact percentage, how long until the window resets and at what time, and refresh, open About, or quit. It follows your Windows light or dark mode. Right-click it for **Refresh now**, **Show AI % on the taskbar**, **Start with Windows**, and **Quit**. With the taskbar text off, or when the taskbar is vertical or auto-hidden, AI Meter shows the percentage as a tray icon instead. If it shows **–**, AI Meter couldn't find a sign-in for that provider or the provider changed its usage endpoint. Sign in to Claude Code or the Codex CLI ([troubleshooting guide](https://guruhat.com/apps/ai-meter/troubleshooting/)), then refresh. When the problem is a missing or expired sign-in, the panel shows a **Troubleshooting** link to the same guide.
+Click the tray icon to open the usage panel: switch between **Claude** and **Codex**, see the exact percentage, how long until the window resets and at what time, and refresh, open the About window (version and a Support AI Meter link, like the macOS version), or quit. It follows your Windows light or dark mode. Right-click it for **Refresh now**, **Show AI % on the taskbar**, **Start with Windows**, and **Quit**. With the taskbar text off, or when the taskbar is vertical or auto-hidden, AI Meter shows the percentage as a tray icon instead. If it shows **–**, AI Meter couldn't find a sign-in for that provider or the provider changed its usage endpoint. Sign in to Claude Code or the Codex CLI ([troubleshooting guide](https://guruhat.com/apps/ai-meter/troubleshooting/)), then refresh. When the problem is a missing or expired sign-in, the panel shows a **Troubleshooting** link to the same guide.
 
 ## Privacy
 
@@ -27,7 +27,7 @@ Your token is sent only to the provider it belongs to: `https://api.anthropic.co
 
 ## Build
 
-Requires the .NET 8 SDK on Windows. The app targets .NET Framework 4.8, which comes with Windows 10 and 11, so the build is a small folder (`AIMeter.exe`, its `.config`, and the System.Text.Json DLLs) rather than a self-contained runtime.
+GitHub Actions builds it, so nothing needs to be installed locally. To build on your own PC, you need the .NET 8 SDK (only as the compiler). The app targets .NET Framework 4.8, which comes with Windows 10 and 11, so the build is a small folder (`AIMeter.exe`, its `.config`, and the System.Text.Json DLLs) rather than a self-contained runtime.
 
 ```powershell
 dotnet publish AIMeter.csproj -c Release -o publish

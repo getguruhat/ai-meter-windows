@@ -98,6 +98,17 @@ internal static class SmokeTest
                     bitmap.Save($"screenshots/panel-{name}-{themeName}.png");
                     Check($"Panel {name} {themeName}", bitmap.Height > 100 && bitmap.GetPixel(3, bitmap.Height / 2).ToArgb() == look.Back.ToArgb());
                 }
+
+            Check("Version", AboutWindow.Version.Count(c => c == '.') == 2);
+            using var about = new AboutWindow(() => { });
+            foreach (var (themeName, look) in new[] { ("light", Theme.Light), ("dark", Theme.Dark) })
+            {
+                using var bitmap = about.Preview(look);
+                bitmap.Save($"screenshots/about-{themeName}.png");
+                // The embedded app icon is drawn at the top center.
+                Check($"About {themeName}", bitmap.Height > 300 && bitmap.GetPixel(3, 3).ToArgb() == look.Back.ToArgb()
+                    && bitmap.GetPixel(bitmap.Width / 2, (int)(98 * bitmap.Height / 430f)).ToArgb() != look.Back.ToArgb());
+            }
         }
         catch (Exception error)
         {

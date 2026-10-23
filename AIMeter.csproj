@@ -10,7 +10,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>AIMeter</AssemblyName>
     <RootNamespace>AIMeter</RootNamespace>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Product>AI Meter</Product>
     <Company>GuruHat</Company>
     <ApplicationIcon>assets\AIMeter.ico</ApplicationIcon>
@@ -26,6 +26,8 @@
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <!-- The MSIX startup task API ("Start with Windows" in the Store version). -->
     <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
+    <!-- The app icon at full size, for the About window. -->
+    <EmbeddedResource Include="assets\AIMeter.png" LogicalName="AIMeter.png" />
   </ItemGroup>
   <!-- Windows supplies the WinRT metadata at run time; don't copy the .winmd files. -->
   <Target Name="SkipWinmdCopy" AfterTargets="ResolveAssemblyReferences">

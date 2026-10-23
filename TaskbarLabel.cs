@@ -144,7 +144,7 @@ internal sealed class TaskbarLabel : Form
         using var family = new FontFamily(Family);
         using var path = new GraphicsPath();
         // Filled as a shape: text drawn onto a transparent bitmap gets dark edges.
-        path.AddString(label, family, (int)FontStyle.Regular, 17 * scale, Point.Empty, StringFormat.GenericTypographic);
+        path.AddString(label, family, (int)FontStyle.Regular, 15 * scale, Point.Empty, StringFormat.GenericTypographic);
         var bounds = path.GetBounds();
         var pad = (int)Math.Round(6 * scale);
         var bitmap = new Bitmap((int)Math.Ceiling(bounds.Width) + pad * 2, height, PixelFormat.Format32bppArgb);
