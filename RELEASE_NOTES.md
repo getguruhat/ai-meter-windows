@@ -1,11 +1,15 @@
 AI Meter shows how much of your Claude Code or Codex usage is left, right on the Windows taskbar, along with when it resets.
 
 **Install**
-1. Download `AI-Meter-1.0.3-Windows-Setup.exe` below and run it. No administrator rights needed.
+1. Download `AI-Meter-1.0.4-Windows-Setup.exe` below and run it. No administrator rights needed.
 2. If Windows SmartScreen says it protected your PC, choose **More info › Run anyway**. The installer isn't code-signed yet.
 3. Click "AI %" on the taskbar and pick **Claude** or **Codex**.
 
-**What's new in 1.0.3**
+**What's new in 1.0.4**
+- AI Meter now speaks your language: it follows your Windows display language in Spanish, German, French, Portuguese, Japanese, Simplified Chinese, and Korean, and uses English for any other language
+- Times follow your Windows regional format, such as 15:40 or 3:40 PM
+
+**What was new in 1.0.3**
 - The About button opens an About AI Meter window, like the macOS version: the app icon, version, and a Support AI Meter link
 - The "AI 79%" taskbar text is a little smaller (15 px), in the same font as the clock, so it sits more naturally next to it
 

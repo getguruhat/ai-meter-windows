@@ -14,7 +14,7 @@ internal sealed class AboutWindow : Form
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
-    /// "1.0.3", from the Version in AIMeter.csproj.
+    /// "1.0.4", from the Version in AIMeter.csproj.
     public static readonly string Version = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
 
     private static AboutWindow? shared;
