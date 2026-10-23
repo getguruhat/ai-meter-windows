@@ -16,7 +16,12 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Publish application
-        run: dotnet publish AIMeter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+        shell: pwsh
+        run: |
+          dotnet publish AIMeter.csproj -c Release -o publish
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+          Get-ChildItem publish | Format-Table Name, Length
+          "Total: {0:N2} MB" -f ((Get-ChildItem publish -Recurse | Measure-Object Length -Sum).Sum / 1MB)
       - name: Smoke test
         shell: pwsh
         run: |

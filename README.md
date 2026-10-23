@@ -27,10 +27,10 @@ Your token is sent only to the provider it belongs to: `https://api.anthropic.co
 
 ## Build
 
-Requires the .NET 8 SDK on Windows.
+Requires the .NET 8 SDK on Windows. The app targets .NET Framework 4.8, which comes with Windows 10 and 11, so the build is a small folder (`AIMeter.exe`, its `.config`, and the System.Text.Json DLLs) rather than a self-contained runtime.
 
 ```powershell
-dotnet publish AIMeter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
+dotnet publish AIMeter.csproj -c Release -o publish
 publish\AIMeter.exe --smoke-test   # writes smoke-test.log and icon previews to screenshots\
 ```
 

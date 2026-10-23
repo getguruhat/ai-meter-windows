@@ -18,7 +18,8 @@ internal static class Program
         if (args.Contains("--smoke-test")) return SmokeTest.Run();
         using var mutex = new Mutex(true, "GuruHat.AIMeter.Windows", out var first);
         if (!first) return 0;
-        ApplicationConfiguration.Initialize();
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
         Application.Run(new MeterContext());
         return 0;
     }
@@ -114,7 +115,7 @@ internal static class Startup
                 return;
             }
             using var key = Registry.CurrentUser.CreateSubKey(RunKey);
-            if (value) key.SetValue(ValueName, $"\"{Environment.ProcessPath}\"");
+            if (value) key.SetValue(ValueName, $"\"{Application.ExecutablePath}\"");
             else key.DeleteValue(ValueName, false);
         }
     }
@@ -177,7 +178,7 @@ internal static class MeterIcon
         {
             var bounds = path.GetBounds();
             using var center = new Matrix();
-            center.Translate(MathF.Round((size - bounds.Width) / 2 - bounds.X), MathF.Round((size - bounds.Height) / 2 - bounds.Y));
+            center.Translate((float)Math.Round((size - bounds.Width) / 2 - bounds.X), (float)Math.Round((size - bounds.Height) / 2 - bounds.Y));
             path.Transform(center);
             g.FillPath(brush, path);
         }
@@ -316,7 +317,7 @@ internal sealed class MeterContext : ApplicationContext
         var summary = reading is null ? "unavailable" : $"{reading.Remaining}% left";
         if (reading?.Reset is { } when) summary += $", resets {Usage.ResetText(when, DateTime.Now).At}";
         var tip = $"AI Meter · {settings.Provider}: {summary}";
-        tray.Text = tip.Length > 127 ? tip[..127] : tip;
+        tray.Text = tip.Length > 127 ? tip.Substring(0, 127) : tip;
         label.SetText(reading is null ? "AI –" : $"AI {reading.Remaining}%", tip);
         var old = icon;
         icon = MeterIcon.Create(reading?.Remaining);

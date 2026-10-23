@@ -1,18 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- The Windows 10 SDK version gives access to the MSIX startup task API. -->
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
-    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
-    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
-    <UseWindowsForms>true</UseWindowsForms>
+    <!-- .NET Framework 4.8 is part of Windows 10 and 11, so the app doesn't carry a runtime
+         of its own (a self-contained .NET 8 build was ~175 MB). -->
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Global usings are in Compat.cs: the SDK only generates the Windows Forms ones for .NET 5+. -->
+    <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>AIMeter</AssemblyName>
     <RootNamespace>AIMeter</RootNamespace>
     <Version>1.0.0</Version>
     <Product>AI Meter</Product>
     <Company>GuruHat</Company>
     <ApplicationIcon>assets\AIMeter.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <DebugType>embedded</DebugType>
+    <!-- Keep the packages' .xml docs and .pdb files out of the install folder. -->
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <!-- The MSIX startup task API ("Start with Windows" in the Store version). -->
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" />
+  </ItemGroup>
+  <!-- Windows supplies the WinRT metadata at run time; don't copy the .winmd files. -->
+  <Target Name="SkipWinmdCopy" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Extension)' == '.winmd'" />
+    </ItemGroup>
+  </Target>
 </Project>

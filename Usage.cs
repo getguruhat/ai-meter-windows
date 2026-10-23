@@ -104,9 +104,10 @@ internal static class Usage
         if (lastRenewal is { } last && DateTime.Now - last < TimeSpan.FromMinutes(10)) return false;
         lastRenewal = DateTime.Now;
         if (FindClaudeCli() is not { } cli) return false;
+        // cmd /c drops the outer quotes, leaving "<path>" doctor.
         var start = cli.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)
-            ? new ProcessStartInfo("cmd.exe") { ArgumentList = { "/c", cli, "doctor" } }
-            : new ProcessStartInfo(cli) { ArgumentList = { "doctor" } };
+            ? new ProcessStartInfo("cmd.exe", $"/c \"\"{cli}\" doctor\"")
+            : new ProcessStartInfo(cli, "doctor");
         start.UseShellExecute = false;
         start.CreateNoWindow = true;
         start.WorkingDirectory = Home;
@@ -114,9 +115,10 @@ internal static class Usage
         {
             using var process = Process.Start(start);
             if (process is null) return false;
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            try { await process.WaitForExitAsync(timeout.Token); }
-            catch (OperationCanceledException) { process.Kill(true); }
+            // .NET Framework has no WaitForExitAsync, and its Kill can't stop the node process
+            // that claude.cmd starts, so taskkill /T ends the whole tree.
+            if (!await Task.Run(() => process.WaitForExit(60_000)))
+                Process.Start(new ProcessStartInfo("taskkill", $"/T /F /PID {process.Id}") { UseShellExecute = false, CreateNoWindow = true })?.Dispose();
             return true;
         }
         catch (System.ComponentModel.Win32Exception) { return false; }
@@ -129,7 +131,7 @@ internal static class Usage
             Path.Combine(Home, ".local", "bin"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm")
         };
-        folders.AddRange((Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries));
+        folders.AddRange((Environment.GetEnvironmentVariable("PATH") ?? "").Split(new[] { Path.PathSeparator }, StringSplitOptions.RemoveEmptyEntries));
         foreach (var folder in folders)
             foreach (var name in new[] { "claude.exe", "claude.cmd" })
                 if (File.Exists(Path.Combine(folder, name))) return Path.Combine(folder, name);
@@ -150,7 +152,7 @@ internal static class Usage
         if (status == 429)
         {
             // Honor Retry-After, within 1 minute to 2 hours; otherwise wait 15 minutes.
-            var wait = retryAfter is { } r ? TimeSpan.FromSeconds(Math.Clamp(r.TotalSeconds, 60, 7200)) : TimeSpan.FromMinutes(15);
+            var wait = retryAfter is { } r ? TimeSpan.FromSeconds(Math.Max(60, Math.Min(r.TotalSeconds, 7200))) : TimeSpan.FromMinutes(15);
             var until = now + wait;
             return new Outcome(null, RateLimitText(provider, until), until);
         }
@@ -210,7 +212,7 @@ internal static class Usage
     private static JsonNode? Parse(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return null;
-        try { return JsonNode.Parse(json); } catch (JsonException) { return null; }
+        try { return JsonNode.Parse(json!); } catch (JsonException) { return null; }
     }
 
     private static JsonNode? Get(JsonNode? node, string key) => node is JsonObject obj ? obj[key] : null;

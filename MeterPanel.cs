@@ -173,8 +173,8 @@ internal sealed class MeterPanel : Form
         var area = screen.WorkingArea;
         var bounds = screen.Bounds;
         var gap = S(12);
-        var x = Math.Clamp(anchor.X - Width / 2, area.Left + gap, area.Right - Width - gap);
-        var y = Math.Clamp(anchor.Y - Height / 2, area.Top + gap, area.Bottom - Height - gap);
+        var x = Math.Max(area.Left + gap, Math.Min(anchor.X - Width / 2, area.Right - Width - gap));
+        var y = Math.Max(area.Top + gap, Math.Min(anchor.Y - Height / 2, area.Bottom - Height - gap));
         opensUpward = true;
         if (area.Bottom < bounds.Bottom) y = area.Bottom - Height - gap;
         else if (area.Top > bounds.Top) { y = area.Top + gap; opensUpward = false; }
@@ -217,7 +217,7 @@ internal sealed class MeterPanel : Form
         // Provider switch, like the macOS segmented control.
         var track = new Rectangle(pad, y, inner, S(30));
         Fill(g, track, theme.Track, S(8));
-        var providers = Enum.GetValues<Provider>();
+        var providers = (Provider[])Enum.GetValues(typeof(Provider));
         var segment = (track.Width - S(4)) / providers.Length;
         for (var i = 0; i < providers.Length; i++)
         {
@@ -252,7 +252,7 @@ internal sealed class MeterPanel : Form
             {
                 var (inText, atText) = Usage.ResetText(reset, DateTime.Now);
                 y += Line(g, inText, strong!, theme.Text, pad, y, inner) + S(2);
-                y += Line(g, char.ToUpper(atText[0]) + atText[1..], small!, theme.Secondary, pad, y, inner);
+                y += Line(g, char.ToUpper(atText[0]) + atText.Substring(1), small!, theme.Secondary, pad, y, inner);
             }
             else y += Line(g, "Reset time not reported", small!, theme.Secondary, pad, y, inner);
         }

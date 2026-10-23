@@ -153,7 +153,7 @@ internal sealed class TaskbarLabel : Form
         g.SmoothingMode = SmoothingMode.AntiAlias;
         using (var center = new Matrix())
         {
-            center.Translate(pad - bounds.X, MathF.Round((height - bounds.Height) / 2 - bounds.Y));
+            center.Translate(pad - bounds.X, (float)Math.Round((height - bounds.Height) / 2 - bounds.Y));
             path.Transform(center);
         }
         using var brush = new SolidBrush(light ? Color.Black : Color.White);
