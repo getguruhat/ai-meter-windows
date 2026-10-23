@@ -23,7 +23,7 @@ internal static class Usage
     private static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("AI-Meter/1.0.0 (Windows)");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("AI-Meter/1.0.1 (Windows)");
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return client;
     }

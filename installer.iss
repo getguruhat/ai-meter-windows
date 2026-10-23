@@ -1,5 +1,5 @@
 #define AppName "AI Meter"
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.1"
 [Setup]
 AppId={{6C1E2B57-4D0A-4F3B-9E7C-2A8F5D41B9C3}
 AppName={#AppName}
