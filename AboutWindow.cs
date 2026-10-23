@@ -92,7 +92,7 @@ internal sealed class AboutWindow : Form
             body = Make("Segoe UI", 15);
             strong = Make("Segoe UI Semibold", 15);
             small = Make("Segoe UI", 12);
-            glyph = Make("Segoe UI Symbol", 15);
+            glyph = Make("Segoe UI Symbol", 22);
         }
         ClientSize = new Size(S(ContentWidth), S(ContentHeight));
         Invalidate();
@@ -137,9 +137,10 @@ internal sealed class AboutWindow : Form
         var labelSize = TextRenderer.MeasureText(label, body, Size.Empty, TextFormatFlags.NoPadding);
         var gap = S(10);
         var total = heartSize.Width + gap + labelSize.Width;
-        link = new Rectangle((width - total) / 2, y, total, Math.Max(heartSize.Height, labelSize.Height));
-        TextRenderer.DrawText(g, heart, glyph, new Point(link.X, y), accent, TextFormatFlags.NoPadding);
-        var labelAt = new Point(link.X + heartSize.Width + gap, y);
+        var height = Math.Max(heartSize.Height, labelSize.Height);
+        link = new Rectangle((width - total) / 2, y, total, height);
+        TextRenderer.DrawText(g, heart, glyph, new Point(link.X, y + (height - heartSize.Height) / 2), accent, TextFormatFlags.NoPadding);
+        var labelAt = new Point(link.X + heartSize.Width + gap, y + (height - labelSize.Height) / 2);
         TextRenderer.DrawText(g, label, body, labelAt, accent, TextFormatFlags.NoPadding);
         if (hovering)
         {
