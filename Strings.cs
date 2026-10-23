@@ -244,7 +244,7 @@ internal sealed record Strings
         {
             Remaining = "残り",
             ResetNotReported = "リセット時刻は不明です",
-            Unavailable = "AI の使用状況を取得できません",
+            Unavailable = "AI 使用量を取得できません",
             UnavailableHint = "使用状況を読み取れるとリセット時刻が表示されます。",
             Troubleshooting = "トラブルシューティング ガイドを開く ›",
             Refresh = "更新",
