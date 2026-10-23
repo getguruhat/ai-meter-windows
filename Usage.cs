@@ -43,12 +43,12 @@ internal static class Usage
     {
         var auth = ReadFile(Path.Combine(ConfigDir("CODEX_HOME", ".codex"), "auth.json"));
         var (token, account) = ParseCodexAuth(auth);
-        if (token is null) return new Outcome(null, "No Codex sign-in found. Run codex and sign in with ChatGPT.", SignIn: true);
+        if (token is null) return new Outcome(null, Strings.Current.CodexNoSignIn, SignIn: true);
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://chatgpt.com/backend-api/wham/usage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Add("ChatGPT-Account-Id", account ?? "");
         var reply = await SendAsync(request);
-        return Failure(reply.Status, reply.RetryAfter, Provider.Codex, "Codex sign-in expired. Run codex once to renew it.", DateTime.Now)
+        return Failure(reply.Status, reply.RetryAfter, Provider.Codex, Strings.Current.CodexExpired, DateTime.Now)
             ?? Result(ParseCodexUsage(reply.Body), Provider.Codex);
     }
 
@@ -74,24 +74,23 @@ internal static class Usage
     {
         var credentialsFile = Path.Combine(ConfigDir("CLAUDE_CONFIG_DIR", ".claude"), ".credentials.json");
         var (token, expires) = ParseClaudeCredentials(ReadFile(credentialsFile));
-        if (token is null) return new Outcome(null, "No Claude Code sign-in found in a terminal. Signing in to the Claude app isn't enough.", SignIn: true);
+        if (token is null) return new Outcome(null, Strings.Current.ClaudeNoSignIn, SignIn: true);
         // Claude Code renews its sign-in only while it runs, and the desktop app keeps a
         // separate one, so the saved token often expires. Asking with it would just spend
         // the usage endpoint's small request allowance, so renew it first.
         if (expires is { } e && e < DateTime.Now)
         {
-            if (!await RenewClaudeSignInAsync())
-                return new Outcome(null, $"Claude sign-in expired at {e:h:mm tt}. Run claude in a terminal once to renew it.", SignIn: true);
+            var expired = new Outcome(null, string.Format(Strings.Current.ClaudeExpiredAt, Strings.Time(e)), SignIn: true);
+            if (!await RenewClaudeSignInAsync()) return expired;
             (token, expires) = ParseClaudeCredentials(ReadFile(credentialsFile));
-            if (token is null || expires < DateTime.Now)
-                return new Outcome(null, $"Claude sign-in expired at {e:h:mm tt}. Run claude in a terminal once to renew it.", SignIn: true);
+            if (token is null || expires < DateTime.Now) return expired;
         }
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/api/oauth/usage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Add("anthropic-version", "2023-06-01");
         request.Headers.Add("anthropic-beta", "oauth-2025-04-20");
         var reply = await SendAsync(request);
-        return Failure(reply.Status, reply.RetryAfter, Provider.Claude, "Claude sign-in expired. Use Claude Code once to renew it.", DateTime.Now)
+        return Failure(reply.Status, reply.RetryAfter, Provider.Claude, Strings.Current.ClaudeExpired, DateTime.Now)
             ?? Result(ParseClaudeUsage(reply.Body), Provider.Claude);
     }
 
@@ -158,27 +157,31 @@ internal static class Usage
             return new Outcome(null, RateLimitText(provider, until), until);
         }
         if (status is 401 or 403) return new Outcome(null, expired, SignIn: true);
-        return new Outcome(null, $"Couldn't get usage from {provider}. Trying again in 5 minutes.");
+        return new Outcome(null, UnreachableText(provider));
     }
 
-    /// How long until a usage window resets ("Resets in 2 h 14 min") and when ("today at 8:14 PM").
+    /// How long until a usage window resets ("Resets in 2 h 14 min") and when ("today at 8:14 PM"),
+    /// in the app's language.
     public static (string In, string At) ResetText(DateTime reset, DateTime now)
     {
+        var t = Strings.Current;
         var left = reset - now;
-        var span = left <= TimeSpan.Zero ? "Resetting now"
-            : left < TimeSpan.FromMinutes(1) ? "Resets in under a minute"
-            : left < TimeSpan.FromHours(1) ? $"Resets in {(int)Math.Ceiling(left.TotalMinutes)} min"
-            : left < TimeSpan.FromDays(1) ? $"Resets in {(int)left.TotalHours} h" + (left.Minutes > 0 ? $" {left.Minutes} min" : "")
-            : $"Resets in {(int)left.TotalDays} d" + (left.Hours > 0 ? $" {left.Hours} h" : "");
-        var day = (reset.Date - now.Date).Days switch { 0 => "today", 1 => "tomorrow", _ => reset.ToString("ddd, MMM d") };
-        return (span, $"{day} at {reset:h:mm tt}");
+        var span = left <= TimeSpan.Zero ? t.ResettingNow
+            : left < TimeSpan.FromMinutes(1) ? t.ResetsSoon
+            : left < TimeSpan.FromHours(1) ? string.Format(t.ResetsMinutes, (int)Math.Ceiling(left.TotalMinutes))
+            : left < TimeSpan.FromDays(1) ? (left.Minutes > 0 ? string.Format(t.ResetsHoursMinutes, (int)left.TotalHours, left.Minutes) : string.Format(t.ResetsHours, (int)left.TotalHours))
+            : left.Hours > 0 ? string.Format(t.ResetsDaysHours, (int)left.TotalDays, left.Hours) : string.Format(t.ResetsDays, (int)left.TotalDays);
+        var day = (reset.Date - now.Date).Days switch { 0 => t.Today, 1 => t.Tomorrow, _ => t.DayName(reset) };
+        return (span, string.Format(t.DayAtTime, day, Strings.Time(reset)));
     }
 
     public static string RateLimitText(Provider provider, DateTime until) =>
-        $"{provider} is limiting usage checks. Next check at {until:h:mm tt}.";
+        string.Format(Strings.Current.RateLimited, provider, Strings.Time(until));
+
+    private static string UnreachableText(Provider provider) => string.Format(Strings.Current.Unreachable, provider);
 
     private static Outcome Result(Reading? reading, Provider provider) =>
-        reading is null ? new Outcome(null, $"Couldn't get usage from {provider}. Trying again in 5 minutes.") : new Outcome(reading);
+        reading is null ? new Outcome(null, UnreachableText(provider)) : new Outcome(reading);
 
     public static Reading? ParseClaudeUsage(string? json)
     {

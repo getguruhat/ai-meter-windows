@@ -41,7 +41,7 @@ internal sealed class AboutWindow : Form
         AutoScaleMode = AutoScaleMode.None;
         DoubleBuffered = true;
         KeyPreview = true;
-        Text = "About AI Meter";
+        Text = Strings.Current.About;
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         Relayout();
     }
@@ -124,15 +124,17 @@ internal sealed class AboutWindow : Form
             y += size + S(16);
         }
         y += Centre(g, "AI Meter", name!, theme.Text, y) + S(12);
-        y += Centre(g, $"Version {Version}", body!, theme.Secondary, y) + S(14);
-        y += Centre(g, "A GuruHat open-source tool", strong!, theme.Text, y) + S(22);
+        var text = Strings.Current;
+        y += Centre(g, string.Format(text.Version, Version), body!, theme.Secondary, y) + S(14);
+        y += Centre(g, text.Tagline, strong!, theme.Text, y) + S(22);
 
         using (var pen = new Pen(theme.Line, Math.Max(1, scale))) g.DrawLine(pen, pad, y, width - pad, y);
         y += S(22);
 
         // "♥ Support AI Meter" as a link in the accent blue, underlined while hovered.
         var accent = theme == Theme.Dark ? Color.FromArgb(76, 194, 255) : Color.FromArgb(0, 95, 184);
-        const string heart = "♥", label = "Support AI Meter";
+        const string heart = "♥";
+        var label = text.Support;
         var heartSize = TextRenderer.MeasureText(heart, glyph, Size.Empty, TextFormatFlags.NoPadding);
         var labelSize = TextRenderer.MeasureText(label, body, Size.Empty, TextFormatFlags.NoPadding);
         var gap = S(10);
@@ -148,7 +150,7 @@ internal sealed class AboutWindow : Form
             g.DrawLine(pen, labelAt.X, labelAt.Y + labelSize.Height, labelAt.X + labelSize.Width, labelAt.Y + labelSize.Height);
         }
         y = link.Bottom + S(18);
-        Centre(g, "Thank you for supporting this project!", small!, theme.Secondary, y);
+        Centre(g, text.Thanks, small!, theme.Secondary, y);
     }
 
     /// Writes one centered line at y and returns its height.

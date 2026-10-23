@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace AIMeter;
 
 /// Run with `AIMeter.exe --smoke-test`. Checks response parsing, saved settings, and the
@@ -13,6 +15,8 @@ internal static class SmokeTest
 
         try
         {
+            // The checks below expect English text; the translations are checked further down.
+            Strings.Use(new CultureInfo("en-US"));
             var codex = Usage.ParseCodexUsage("""{"rate_limit":{"primary_window":{"used_percent":41.9,"reset_at":1792543200}}}""");
             Check("Codex usage", codex?.Remaining == 59 && codex.Reset == DateTimeOffset.FromUnixTimeSeconds(1792543200).LocalDateTime);
             var codexMs = Usage.ParseCodexUsage("""{"rate_limit":{"primary_window":{"used_percent":"100","reset_at":1792543200000}}}""");
@@ -45,6 +49,24 @@ internal static class SmokeTest
             Check("Reset tomorrow", Usage.ResetText(now.AddHours(22), now) is ("Resets in 22 h", var at2) && at2.StartsWith("tomorrow at"));
             Check("Reset in days", Usage.ResetText(now.AddDays(3).AddHours(5), now).In == "Resets in 3 d 5 h");
             Check("Reset passed", Usage.ResetText(now.AddMinutes(-1), now).In == "Resetting now");
+
+            // Every translation is picked by its culture, and its templates and date format work.
+            foreach (var name in new[] { "es-ES", "de-DE", "fr-FR", "pt-BR", "ja-JP", "zh-CN", "ko-KR" })
+            {
+                var strings = Strings.For(new CultureInfo(name));
+                var formats = typeof(Strings).GetProperties().Where(p => p.PropertyType == typeof(string)).Select(p => (string)p.GetValue(strings)!).ToList();
+                var works = true;
+                try { foreach (var format in formats) _ = string.Format(format, "x", "y"); _ = strings.DayName(now); }
+                catch (FormatException) { works = false; }
+                Check($"Strings {name}", strings.Remaining != "remaining" && works && formats.All(f => f.Length > 0));
+            }
+            Check("Traditional Chinese falls back to English", Strings.For(new CultureInfo("zh-TW")).Remaining == "remaining");
+            Check("Regional German uses German", Strings.For(new CultureInfo("de-AT")).Remaining == "verbleibend");
+            Strings.Use(new CultureInfo("de-DE"));
+            Check("German reset text", Usage.ResetText(now.AddHours(2).AddMinutes(14), now) is ("Zurücksetzung in 2 Std. 14 Min.", var deAt) && deAt.StartsWith("heute um"));
+            Strings.Use(new CultureInfo("ja-JP"));
+            Check("Japanese reset text", Usage.ResetText(now.AddDays(3).AddHours(5), now).In == "3 日 5 時間後にリセット");
+            Strings.Use(new CultureInfo("en-US"));
 
             var folder = Path.Combine(Path.GetTempPath(), "AIMeter-check-" + Guid.NewGuid().ToString("N"));
             try
@@ -98,6 +120,18 @@ internal static class SmokeTest
                     bitmap.Save($"screenshots/panel-{name}-{themeName}.png");
                     Check($"Panel {name} {themeName}", bitmap.Height > 100 && bitmap.GetPixel(3, bitmap.Height / 2).ToArgb() == look.Back.ToArgb());
                 }
+
+            // The panel in two translations, for checking that longer or CJK text fits.
+            foreach (var name in new[] { "de-DE", "ja-JP" })
+            {
+                Strings.Use(new CultureInfo(name));
+                using var bitmap = panel.Preview(new PanelState(Provider.Claude, new Reading(58, DateTime.Now.AddHours(2).AddMinutes(14)), null), Theme.Light);
+                bitmap.Save($"screenshots/panel-reading-{name}.png");
+                using var signedOut = panel.Preview(new PanelState(Provider.Claude, null, Strings.Current.ClaudeNoSignIn, SignIn: true), Theme.Light);
+                signedOut.Save($"screenshots/panel-signed-out-{name}.png");
+                Check($"Panel {name}", bitmap.Height > 100 && signedOut.Height > bitmap.Height);
+            }
+            Strings.Use(new CultureInfo("en-US"));
 
             Check("Version", AboutWindow.Version.Count(c => c == '.') == 2);
             using var about = new AboutWindow(() => { });

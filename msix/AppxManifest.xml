@@ -20,8 +20,17 @@
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
   </Dependencies>
+  <!-- The languages the app's text is translated into (Strings.cs). The Store lists these
+       as the app's languages. -->
   <Resources>
     <Resource Language="en-us" />
+    <Resource Language="es-es" />
+    <Resource Language="de-de" />
+    <Resource Language="fr-fr" />
+    <Resource Language="pt-br" />
+    <Resource Language="ja-jp" />
+    <Resource Language="zh-cn" />
+    <Resource Language="ko-kr" />
   </Resources>
   <Applications>
     <Application Id="AIMeter" Executable="AIMeter.exe" EntryPoint="Windows.FullTrustApplication">

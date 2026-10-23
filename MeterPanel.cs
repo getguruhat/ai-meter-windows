@@ -64,12 +64,13 @@ internal sealed class MeterPanel : Form
         // Segoe Fluent Icons ships with Windows 11; Windows 10 has the same glyphs in Segoe MDL2 Assets.
         using (var fonts = new InstalledFontCollection())
             iconFamily = fonts.Families.Any(f => f.Name == "Segoe Fluent Icons") ? "Segoe Fluent Icons" : "Segoe MDL2 Assets";
+        var text = Strings.Current;
         buttons =
         [
-            ("", "Refresh", refresh),
-            ("", "About AI Meter", about),
-            ("", "Support AI Meter", support),
-            ("", "Quit", quit)
+            ("", text.Refresh, refresh),
+            ("", text.About, about),
+            ("", text.Support, support),
+            ("", text.Quit, quit)
         ];
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
@@ -212,6 +213,7 @@ internal sealed class MeterPanel : Form
     private int Draw(Graphics? g)
     {
         targets.Clear();
+        var text = Strings.Current;
         var pad = S(16);
         var inner = S(PanelWidth) - pad * 2;
         var y = pad;
@@ -239,9 +241,9 @@ internal sealed class MeterPanel : Form
             var number = $"{reading.Remaining}%";
             var size = TextRenderer.MeasureText(number, big, Size.Empty, NoPad);
             Write(g, number, big!, new Rectangle(pad, y, size.Width, size.Height), theme.Text, NoPad);
-            var label = TextRenderer.MeasureText("remaining", body, Size.Empty, NoPad);
+            var label = TextRenderer.MeasureText(text.Remaining, body, Size.Empty, NoPad);
             var labelY = y + (int)(Ascent(big!) - Ascent(body!));
-            Write(g, "remaining", body!, new Rectangle(pad + size.Width + S(6), labelY, label.Width, label.Height), theme.Secondary, NoPad);
+            Write(g, text.Remaining, body!, new Rectangle(pad + size.Width + S(6), labelY, label.Width, label.Height), theme.Secondary, NoPad);
             y += size.Height + S(8);
 
             var bar = new Rectangle(pad, y, inner, S(6));
@@ -256,23 +258,24 @@ internal sealed class MeterPanel : Form
                 y += Line(g, inText, strong!, theme.Text, pad, y, inner) + S(2);
                 y += Line(g, char.ToUpper(atText[0]) + atText.Substring(1), small!, theme.Secondary, pad, y, inner);
             }
-            else y += Line(g, "Reset time not reported", small!, theme.Secondary, pad, y, inner);
+            else y += Line(g, text.ResetNotReported, small!, theme.Secondary, pad, y, inner);
         }
         else
         {
-            y += Line(g, "AI usage unavailable", title!, theme.Text, pad, y, inner) + S(2);
-            y += Line(g, "Reset time shows once usage can be read.", small!, theme.Secondary, pad, y, inner);
+            y += Line(g, text.Unavailable, title!, theme.Text, pad, y, inner) + S(2);
+            y += Line(g, text.UnavailableHint, small!, theme.Secondary, pad, y, inner);
         }
 
         if (state.Problem is { } problem) y += S(10) + Line(g, problem, small!, theme.Warning, pad, y + S(10), inner);
         if (state.SignIn)
         {
             // Links to the troubleshooting guide, like the macOS menu's link.
-            const string text = "Open the troubleshooting guide ›";
-            var size = TextRenderer.MeasureText(text, strong, Size.Empty, NoPad);
+            // Wraps when a translation is longer than the panel is wide.
+            var flags = NoPad | TextFormatFlags.WordBreak;
+            var size = TextRenderer.MeasureText(text.Troubleshooting, strong, new Size(inner, int.MaxValue), flags);
             var link = new Rectangle(pad - S(6), y + S(6), size.Width + S(12), size.Height + S(8));
             if (hover == Target(link, "", troubleshooting)) Fill(g, link, theme.Hover, S(6));
-            Write(g, text, strong!, link, theme.Text, NoPad | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            Write(g, text.Troubleshooting, strong!, new Rectangle(link.X + S(6), link.Y + S(4), size.Width, size.Height), theme.Text, flags);
             y = link.Bottom;
         }
 

@@ -111,7 +111,7 @@ internal static class Startup
                 var state = Task.Run(async () => await task.RequestEnableAsync()).GetAwaiter().GetResult();
                 // Once the user turns AI Meter off in Windows' own startup settings, only they can turn it back on.
                 if (state == StartupTaskState.DisabledByUser)
-                    MessageBox.Show("Windows has AI Meter turned off at startup. Turn it on in Settings › Apps › Startup.", "AI Meter");
+                    MessageBox.Show(Strings.Current.StartupBlocked, "AI Meter");
                 return;
             }
             using var key = Registry.CurrentUser.CreateSubKey(RunKey);
@@ -210,8 +210,8 @@ internal sealed class MeterContext : ApplicationContext
     private readonly Settings settings = Settings.Load();
     private readonly NotifyIcon tray;
     private readonly ContextMenuStrip menu = new();
-    private readonly ToolStripMenuItem startup = new("Start with Windows");
-    private readonly ToolStripMenuItem taskbarText = new("Show AI % on the taskbar");
+    private readonly ToolStripMenuItem startup = new(Strings.Current.StartWithWindows);
+    private readonly ToolStripMenuItem taskbarText = new(Strings.Current.ShowOnTaskbar);
     private readonly MeterPanel panel;
     private readonly TaskbarLabel label = new();
     private readonly Timer timer = new() { Interval = 5 * 60 * 1000 };
@@ -236,11 +236,11 @@ internal sealed class MeterContext : ApplicationContext
         };
         // Right-click keeps a short Windows menu for the settings the panel doesn't show.
         menu.Items.AddRange([
-            new ToolStripMenuItem("Refresh now", null, async (_, _) => await RefreshAsync()),
+            new ToolStripMenuItem(Strings.Current.RefreshNow, null, async (_, _) => await RefreshAsync()),
             taskbarText,
             startup,
             new ToolStripSeparator(),
-            new ToolStripMenuItem("Quit", null, (_, _) => Quit())
+            new ToolStripMenuItem(Strings.Current.Quit, null, (_, _) => Quit())
         ]);
         menu.Opening += (_, _) => { startup.Checked = Startup.Enabled; taskbarText.Checked = settings.TaskbarText; };
         tray = new NotifyIcon { ContextMenuStrip = menu, Visible = true };
@@ -320,8 +320,9 @@ internal sealed class MeterContext : ApplicationContext
     private void Render()
     {
         panel.SetState(new PanelState(settings.Provider, reading, problem, signIn));
-        var summary = reading is null ? "unavailable" : $"{reading.Remaining}% left";
-        if (reading?.Reset is { } when) summary += $", resets {Usage.ResetText(when, DateTime.Now).At}";
+        var text = Strings.Current;
+        var summary = reading is null ? text.TipUnavailable : string.Format(text.TipLeft, reading.Remaining);
+        if (reading?.Reset is { } when) summary += ", " + string.Format(text.TipResets, Usage.ResetText(when, DateTime.Now).At);
         var tip = $"AI Meter · {settings.Provider}: {summary}";
         tray.Text = tip.Length > 127 ? tip.Substring(0, 127) : tip;
         label.SetText(reading is null ? "AI –" : $"AI {reading.Remaining}%", tip);
