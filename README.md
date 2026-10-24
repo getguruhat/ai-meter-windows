@@ -2,6 +2,8 @@
 
 **Your remaining Claude Code or Codex usage, right in the Windows system tray.**
 
+![AI Meter on the Windows taskbar showing 79% of Codex usage remaining and when it resets](docs/ai-meter-tray.png)
+
 AI Meter is a free, open-source GuruHat tray app. It shows how much of your current usage window is left as "AI 79%" on the taskbar, next to the system tray (black on a light taskbar, white on a dark one) and shows when the window resets. It refreshes every five minutes using the sign-in you already have.
 
 - **Claude:** the five-hour window, using the Claude Code sign-in in `%USERPROFILE%\.claude\.credentials.json` (or `CLAUDE_CONFIG_DIR`).
