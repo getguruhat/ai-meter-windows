@@ -43,6 +43,8 @@ internal sealed class Settings
     /// Show "AI 79%" on the taskbar instead of the square tray icon.
     public bool TaskbarText { get; set; } = true;
     public Dictionary<string, CachedReading> Cache { get; set; } = [];
+    /// The newest version the update dialog was shown for, so it asks once per version.
+    public string? AnnouncedUpdate { get; set; }
 
     public static Settings Load(string? folder = null)
     {
@@ -212,9 +214,13 @@ internal sealed class MeterContext : ApplicationContext
     private readonly ContextMenuStrip menu = new();
     private readonly ToolStripMenuItem startup = new(Strings.Current.StartWithWindows);
     private readonly ToolStripMenuItem taskbarText = new(Strings.Current.ShowOnTaskbar);
+    private readonly ToolStripMenuItem update = new() { Visible = false };
     private readonly MeterPanel panel;
     private readonly TaskbarLabel label = new();
     private readonly Timer timer = new() { Interval = 5 * 60 * 1000 };
+    /// The first update check runs a minute after launch, then once a day.
+    private readonly Timer updateTimer = new() { Interval = 60 * 1000 };
+    private string? updatePage;
     private Reading? reading;
     private string? problem;
     private bool signIn;
@@ -235,7 +241,9 @@ internal sealed class MeterContext : ApplicationContext
             label.On = settings.TaskbarText;
         };
         // Right-click keeps a short Windows menu for the settings the panel doesn't show.
+        update.Click += (_, _) => { if (updatePage is not null) Open(updatePage); };
         menu.Items.AddRange([
+            update,
             new ToolStripMenuItem(Strings.Current.RefreshNow, null, async (_, _) => await RefreshAsync()),
             taskbarText,
             startup,
@@ -266,6 +274,32 @@ internal sealed class MeterContext : ApplicationContext
         timer.Tick += async (_, _) => await RefreshAsync();
         timer.Start();
         _ = RefreshAsync();
+        // The Microsoft Store keeps its version up to date.
+        if (!Startup.Packaged)
+        {
+            updateTimer.Tick += async (_, _) =>
+            {
+                updateTimer.Interval = 24 * 60 * 60 * 1000;
+                await CheckForUpdateAsync();
+            };
+            updateTimer.Start();
+        }
+    }
+
+    /// Shows the newer release in the right-click menu, and asks once per version whether to download it.
+    private async Task CheckForUpdateAsync()
+    {
+        if (await UpdateCheck.NewerAsync("getguruhat/ai-meter-windows") is not { } release) return;
+        var text = Strings.Current;
+        var title = string.Format(text.UpdateTitle, "AI Meter", release.Version);
+        updatePage = release.Page;
+        update.Text = title + " ›";
+        update.Visible = true;
+        if (settings.AnnouncedUpdate == release.Version.ToString()) return;
+        settings.AnnouncedUpdate = release.Version.ToString();
+        settings.Save();
+        if (MessageBox.Show(string.Format(text.UpdateMessage, UpdateCheck.Current), title, MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            Open(release.Page);
     }
 
     private void Select(Provider provider)
@@ -345,6 +379,7 @@ internal sealed class MeterContext : ApplicationContext
     private void Quit()
     {
         timer.Stop();
+        updateTimer.Stop();
         SystemEvents.UserPreferenceChanged -= OnPreferenceChanged;
         panel.Dispose();
         label.Dispose();

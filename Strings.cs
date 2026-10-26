@@ -43,6 +43,10 @@ internal sealed record Strings
     public string Tagline { get; init; } = "A GuruHat open-source tool";
     public string Thanks { get; init; } = "Thank you for supporting this project!";
 
+    // Update check (not in the Microsoft Store version)
+    public string UpdateTitle { get; init; } = "{0} {1} is available";
+    public string UpdateMessage { get; init; } = "You have version {0}. Download the new version from GitHub?";
+
     // Taskbar tooltip: "AI Meter · Claude: 58% left, resets today at 8:14 PM"
     public string TipUnavailable { get; init; } = "unavailable";
     public string TipLeft { get; init; } = "{0}% left";
@@ -118,7 +122,9 @@ internal sealed record Strings
             Today = "hoy",
             Tomorrow = "mañana",
             Day = "ddd d MMM",
-            DayAtTime = "{0} a las {1}"
+            DayAtTime = "{0} a las {1}",
+            UpdateTitle = "{0} {1} está disponible",
+            UpdateMessage = "Tienes la versión {0}. ¿Quieres descargar la nueva versión desde GitHub?"
         },
         ["de"] = new()
         {
@@ -158,7 +164,9 @@ internal sealed record Strings
             Today = "heute",
             Tomorrow = "morgen",
             Day = "ddd, d. MMM",
-            DayAtTime = "{0} um {1}"
+            DayAtTime = "{0} um {1}",
+            UpdateTitle = "{0} {1} ist verfügbar",
+            UpdateMessage = "Sie haben Version {0}. Möchten Sie die neue Version von GitHub herunterladen?"
         },
         ["fr"] = new()
         {
@@ -198,7 +206,9 @@ internal sealed record Strings
             Today = "aujourd'hui",
             Tomorrow = "demain",
             Day = "ddd d MMM",
-            DayAtTime = "{0} à {1}"
+            DayAtTime = "{0} à {1}",
+            UpdateTitle = "{0} {1} est disponible",
+            UpdateMessage = "Vous avez la version {0}. Télécharger la nouvelle version depuis GitHub ?"
         },
         ["pt"] = new()
         {
@@ -238,7 +248,9 @@ internal sealed record Strings
             Today = "hoje",
             Tomorrow = "amanhã",
             Day = "ddd, d 'de' MMM",
-            DayAtTime = "{0} às {1}"
+            DayAtTime = "{0} às {1}",
+            UpdateTitle = "{0} {1} está disponível",
+            UpdateMessage = "Você tem a versão {0}. Baixar a nova versão no GitHub?"
         },
         ["ja"] = new()
         {
@@ -278,7 +290,9 @@ internal sealed record Strings
             Today = "今日",
             Tomorrow = "明日",
             Day = "M月d日 (ddd)",
-            DayAtTime = "{0} {1}"
+            DayAtTime = "{0} {1}",
+            UpdateTitle = "{0} {1} が利用可能です",
+            UpdateMessage = "現在のバージョンは {0} です。GitHub から新しいバージョンをダウンロードしますか?"
         },
         ["zh-Hans"] = new()
         {
@@ -318,7 +332,9 @@ internal sealed record Strings
             Today = "今天",
             Tomorrow = "明天",
             Day = "M月d日 ddd",
-            DayAtTime = "{0} {1}"
+            DayAtTime = "{0} {1}",
+            UpdateTitle = "{0} {1} 现已推出",
+            UpdateMessage = "你当前的版本是 {0}。要从 GitHub 下载新版本吗？"
         },
         ["ko"] = new()
         {
@@ -358,7 +374,9 @@ internal sealed record Strings
             Today = "오늘",
             Tomorrow = "내일",
             Day = "M월 d일 (ddd)",
-            DayAtTime = "{0} {1}"
+            DayAtTime = "{0} {1}",
+            UpdateTitle = "{0} {1} 업데이트가 있습니다",
+            UpdateMessage = "현재 버전은 {0}입니다. GitHub에서 새 버전을 다운로드할까요?"
         }
     };
 
