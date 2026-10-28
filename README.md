@@ -1,6 +1,10 @@
 # AI Meter for Windows
 
-**Your remaining Claude Code or Codex usage, right in the Windows system tray.**
+> Main project page and stars: [github.com/getguruhat/ai-meter](https://github.com/getguruhat/ai-meter)
+
+**A fuel gauge for Claude Code and Codex, always visible on your Windows taskbar. Free and open source.**
+
+No account, no analytics; your token only goes to Anthropic or OpenAI.
 
 ![AI Meter on the Windows taskbar showing 79% of Codex usage remaining and when it resets](docs/ai-meter-tray.png)
 
