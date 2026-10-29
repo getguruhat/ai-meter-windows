@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in AI Meter for Windows doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. If AI Meter shows `AI —` or can't find your sign-in, the [troubleshooting guide](https://guruhat.com/apps/ai-meter/troubleshooting/) fixes most cases.
+        Please don't paste tokens or the contents of your credential files.
+  - type: input
+    id: version
+    attributes:
+      label: AI Meter version
+      description: Shown in About AI Meter.
+      placeholder: "for example 1.5.3"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Windows version
+      placeholder: "for example Windows 11 24H2"
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider
+      options:
+        - Claude Code
+        - Codex
+        - Both
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what AI Meter showed instead. A screenshot of the taskbar or the panel helps.
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: For example whether `claude` or `codex` works in a terminal, or when it started.

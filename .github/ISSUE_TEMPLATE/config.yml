@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting guide
+    url: https://guruhat.com/apps/ai-meter/troubleshooting/
+    about: Fixes for "AI —", missing sign-ins and other common problems.
+  - name: AI Meter for macOS
+    url: https://github.com/getguruhat/ai-meter/issues
+    about: Report macOS problems in that repo.
+  - name: Email
+    url: https://guruhat.com/about/
+    about: For anything private, write to hello@guruhat.com.
