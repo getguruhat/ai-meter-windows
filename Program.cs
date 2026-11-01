@@ -59,6 +59,8 @@ internal sealed class Settings
     public Dictionary<string, CachedReading> Cache { get; set; } = [];
     /// The newest version the update dialog was shown for, so it asks once per version.
     public string? AnnouncedUpdate { get; set; }
+    /// Whether the app has asked once if it should start with Windows.
+    public bool AskedStartup { get; set; }
     /// When a provider asked us to back off, no request is sent to it before this time.
     /// Saved, so restarting the app doesn't skip the wait.
     public Dictionary<string, DateTime> RetryAt { get; set; } = [];
@@ -306,6 +308,19 @@ internal sealed class MeterContext : ApplicationContext
             };
             updateTimer.Start();
         }
+        // "Start with Windows" is otherwise only in the right-click menu, so ask once.
+        if (!settings.AskedStartup) Application.Idle += AskStartup;
+    }
+
+    /// Runs once the tray icon is up, and only asks if AI Meter doesn't already start with Windows.
+    private void AskStartup(object? sender, EventArgs e)
+    {
+        Application.Idle -= AskStartup;
+        settings.AskedStartup = true;
+        settings.Save();
+        if (Startup.Enabled) return;
+        if (MessageBox.Show(Strings.Current.StartupQuestion, "AI Meter", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            Startup.Enabled = true;
     }
 
     /// Shows the newer release in the right-click menu, and asks once per version whether to download it.
