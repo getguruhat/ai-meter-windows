@@ -23,6 +23,11 @@ internal sealed record Strings
 
     // Panel
     public string Remaining { get; init; } = "remaining";
+    public string FiveHour { get; init; } = "5-hour limit";
+    public string Weekly { get; init; } = "Weekly limit";
+    public string Monthly { get; init; } = "Monthly limit";
+    public string Plan { get; init; } = "{0} plan";
+    public string PercentLeft { get; init; } = "{0}% left";
     public string ResetNotReported { get; init; } = "Reset time not reported";
     public string Unavailable { get; init; } = "AI usage unavailable";
     public string UnavailableHint { get; init; } = "Reset time shows once usage can be read.";
@@ -59,7 +64,6 @@ internal sealed record Strings
     public string ClaudeExpiredAt { get; init; } = "Claude sign-in expired at {0}. Run claude in a terminal once to renew it.";
     public string ClaudeExpired { get; init; } = "Claude sign-in expired. Use Claude Code once to renew it.";
     public string Unreachable { get; init; } = "Couldn't get usage from {0}. Trying again in 5 minutes.";
-    public string RateLimited { get; init; } = "{0} is limiting usage checks. Next check at {1}.";
 
     // Reset time
     public string ResettingNow { get; init; } = "Resetting now";
@@ -87,6 +91,11 @@ internal sealed record Strings
         ["es"] = new()
         {
             Remaining = "restante",
+            FiveHour = "Límite de 5 horas",
+            Weekly = "Límite semanal",
+            Monthly = "Límite mensual",
+            Plan = "Plan {0}",
+            PercentLeft = "Queda {0}%",
             ResetNotReported = "Hora de reinicio no disponible",
             Unavailable = "Uso de IA no disponible",
             UnavailableHint = "La hora de reinicio aparecerá cuando se pueda leer el uso.",
@@ -111,7 +120,6 @@ internal sealed record Strings
             ClaudeExpiredAt = "El inicio de sesión de Claude caducó a las {0}. Ejecuta claude una vez en una terminal para renovarlo.",
             ClaudeExpired = "El inicio de sesión de Claude caducó. Usa Claude Code una vez para renovarlo.",
             Unreachable = "No se pudo obtener el uso de {0}. Se reintentará en 5 minutos.",
-            RateLimited = "{0} está limitando las consultas de uso. Próxima consulta a las {1}.",
             ResettingNow = "Reiniciando ahora",
             ResetsSoon = "Se reinicia en menos de un minuto",
             ResetsMinutes = "Se reinicia en {0} min",
@@ -129,6 +137,11 @@ internal sealed record Strings
         ["de"] = new()
         {
             Remaining = "verbleibend",
+            FiveHour = "5-Stunden-Limit",
+            Weekly = "Wochenlimit",
+            Monthly = "Monatslimit",
+            Plan = "{0}-Tarif",
+            PercentLeft = "{0} % übrig",
             ResetNotReported = "Zeitpunkt des Zurücksetzens unbekannt",
             Unavailable = "KI-Nutzung nicht verfügbar",
             UnavailableHint = "Der Zeitpunkt des Zurücksetzens erscheint, sobald die Nutzung gelesen werden kann.",
@@ -153,7 +166,6 @@ internal sealed record Strings
             ClaudeExpiredAt = "Claude-Anmeldung um {0} abgelaufen. Führen Sie claude einmal in einem Terminal aus, um sie zu erneuern.",
             ClaudeExpired = "Claude-Anmeldung abgelaufen. Verwenden Sie Claude Code einmal, um sie zu erneuern.",
             Unreachable = "Nutzung von {0} konnte nicht abgerufen werden. Neuer Versuch in 5 Minuten.",
-            RateLimited = "{0} begrenzt die Nutzungsabfragen. Nächste Abfrage um {1}.",
             ResettingNow = "Wird jetzt zurückgesetzt",
             ResetsSoon = "Zurücksetzung in weniger als einer Minute",
             ResetsMinutes = "Zurücksetzung in {0} Min.",
@@ -171,6 +183,11 @@ internal sealed record Strings
         ["fr"] = new()
         {
             Remaining = "restant",
+            FiveHour = "Limite de 5 heures",
+            Weekly = "Limite hebdomadaire",
+            Monthly = "Limite mensuelle",
+            Plan = "Forfait {0}",
+            PercentLeft = "{0} % restant",
             ResetNotReported = "Heure de réinitialisation non communiquée",
             Unavailable = "Utilisation de l'IA indisponible",
             UnavailableHint = "L'heure de réinitialisation s'affichera dès que l'utilisation pourra être lue.",
@@ -195,7 +212,6 @@ internal sealed record Strings
             ClaudeExpiredAt = "La connexion Claude a expiré à {0}. Lancez claude une fois dans un terminal pour la renouveler.",
             ClaudeExpired = "La connexion Claude a expiré. Utilisez Claude Code une fois pour la renouveler.",
             Unreachable = "Impossible d'obtenir l'utilisation de {0}. Nouvel essai dans 5 minutes.",
-            RateLimited = "{0} limite les vérifications d'utilisation. Prochaine vérification à {1}.",
             ResettingNow = "Réinitialisation en cours",
             ResetsSoon = "Réinitialisation dans moins d'une minute",
             ResetsMinutes = "Réinitialisation dans {0} min",
@@ -213,6 +229,11 @@ internal sealed record Strings
         ["pt"] = new()
         {
             Remaining = "restante",
+            FiveHour = "Limite de 5 horas",
+            Weekly = "Limite semanal",
+            Monthly = "Limite mensal",
+            Plan = "Plano {0}",
+            PercentLeft = "Resta {0}%",
             ResetNotReported = "Horário de redefinição não informado",
             Unavailable = "Uso de IA indisponível",
             UnavailableHint = "O horário de redefinição aparece quando o uso puder ser lido.",
@@ -237,7 +258,6 @@ internal sealed record Strings
             ClaudeExpiredAt = "O login do Claude expirou às {0}. Execute claude uma vez em um terminal para renová-lo.",
             ClaudeExpired = "O login do Claude expirou. Use o Claude Code uma vez para renová-lo.",
             Unreachable = "Não foi possível obter o uso do {0}. Nova tentativa em 5 minutos.",
-            RateLimited = "O {0} está limitando as verificações de uso. Próxima verificação às {1}.",
             ResettingNow = "Redefinindo agora",
             ResetsSoon = "Redefine em menos de um minuto",
             ResetsMinutes = "Redefine em {0} min",
@@ -255,6 +275,11 @@ internal sealed record Strings
         ["ja"] = new()
         {
             Remaining = "残り",
+            FiveHour = "5時間の上限",
+            Weekly = "週の上限",
+            Monthly = "月の上限",
+            Plan = "{0} プラン",
+            PercentLeft = "残り {0}%",
             ResetNotReported = "リセット時刻は不明です",
             Unavailable = "AI 使用量を取得できません",
             UnavailableHint = "使用状況を読み取れるとリセット時刻が表示されます。",
@@ -279,7 +304,6 @@ internal sealed record Strings
             ClaudeExpiredAt = "Claude のサインインは {0} に期限切れになりました。ターミナルで claude を一度実行して更新してください。",
             ClaudeExpired = "Claude のサインインの有効期限が切れました。Claude Code を一度使用して更新してください。",
             Unreachable = "{0} から使用状況を取得できませんでした。5 分後に再試行します。",
-            RateLimited = "{0} が使用状況の確認を制限しています。次の確認は {1} です。",
             ResettingNow = "リセット中",
             ResetsSoon = "1 分以内にリセット",
             ResetsMinutes = "{0} 分後にリセット",
@@ -297,6 +321,11 @@ internal sealed record Strings
         ["zh-Hans"] = new()
         {
             Remaining = "剩余",
+            FiveHour = "5 小时限额",
+            Weekly = "每周限额",
+            Monthly = "每月限额",
+            Plan = "{0} 套餐",
+            PercentLeft = "剩余 {0}%",
             ResetNotReported = "未提供重置时间",
             Unavailable = "无法获取 AI 用量",
             UnavailableHint = "读取到用量后将显示重置时间。",
@@ -321,7 +350,6 @@ internal sealed record Strings
             ClaudeExpiredAt = "Claude 登录已于 {0} 过期。请在终端中运行一次 claude 以续期。",
             ClaudeExpired = "Claude 登录已过期。请使用一次 Claude Code 以续期。",
             Unreachable = "无法从 {0} 获取用量。将在 5 分钟后重试。",
-            RateLimited = "{0} 正在限制用量查询。下次查询时间：{1}。",
             ResettingNow = "正在重置",
             ResetsSoon = "不到 1 分钟后重置",
             ResetsMinutes = "{0} 分钟后重置",
@@ -339,6 +367,11 @@ internal sealed record Strings
         ["ko"] = new()
         {
             Remaining = "남음",
+            FiveHour = "5시간 한도",
+            Weekly = "주간 한도",
+            Monthly = "월간 한도",
+            Plan = "{0} 요금제",
+            PercentLeft = "{0}% 남음",
             ResetNotReported = "초기화 시간이 제공되지 않음",
             Unavailable = "AI 사용량을 확인할 수 없음",
             UnavailableHint = "사용량을 읽을 수 있으면 초기화 시간이 표시됩니다.",
@@ -363,7 +396,6 @@ internal sealed record Strings
             ClaudeExpiredAt = "Claude 로그인이 {0}에 만료되었습니다. 터미널에서 claude를 한 번 실행하여 갱신하세요.",
             ClaudeExpired = "Claude 로그인이 만료되었습니다. Claude Code를 한 번 사용하여 갱신하세요.",
             Unreachable = "{0}에서 사용량을 가져오지 못했습니다. 5분 후에 다시 시도합니다.",
-            RateLimited = "{0}에서 사용량 확인을 제한하고 있습니다. 다음 확인: {1}",
             ResettingNow = "지금 초기화 중",
             ResetsSoon = "1분 이내 초기화",
             ResetsMinutes = "{0}분 후 초기화",

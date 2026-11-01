@@ -8,7 +8,20 @@ namespace AIMeter;
 
 internal enum Provider { Codex, Claude }
 
-internal sealed record Reading(int Remaining, DateTime? Reset);
+/// One usage window: the percent left, when it resets, and how long it lasts.
+internal sealed record UsageWindow(int Remaining, DateTime? Reset, double Seconds);
+
+/// The shortest window (five hours, or a month on Codex's free plan), the weekly one when
+/// the plan has it, and the plan name the provider reports ("Free", "Pro").
+internal sealed record Reading(UsageWindow Primary, UsageWindow? Secondary = null, string? Plan = null)
+{
+    public const double FiveHours = 5 * 3600, Week = 7 * 86_400;
+
+    public Reading(int remaining, DateTime? reset) : this(new UsageWindow(remaining, reset, FiveHours)) { }
+
+    public int Remaining => Primary.Remaining;
+    public DateTime? Reset => Primary.Reset;
+}
 
 /// What one usage check produced: a reading, or why there isn't one (and, when the
 /// provider asked us to back off, when to try again).
@@ -58,11 +71,20 @@ internal static class Usage
         return (Text(Get(tokens, "access_token")), Text(Get(tokens, "account_id")));
     }
 
+    /// The free plan has one 30-day window and no weekly one; paid plans have five hours and a week.
     public static Reading? ParseCodexUsage(string? json)
     {
-        var window = Get(Get(Parse(json), "rate_limit"), "primary_window");
-        if (Number(Get(window, "used_percent")) is not { } used) return null;
-        return new Reading(Math.Max(0, 100 - (int)used), Date(Get(window, "reset_at")));
+        var root = Parse(json);
+        var limit = Get(root, "rate_limit");
+        UsageWindow? Window(string key, double fallback)
+        {
+            var window = Get(limit, key);
+            if (Number(Get(window, "used_percent")) is not { } used) return null;
+            var seconds = Number(Get(window, "limit_window_seconds")) is { } s and > 0 ? s : fallback;
+            return new UsageWindow(Math.Max(0, 100 - (int)used), Date(Get(window, "reset_at")), seconds);
+        }
+        if (Window("primary_window", Reading.FiveHours) is not { } primary) return null;
+        return new Reading(primary, Window("secondary_window", Reading.Week), PlanName(Text(Get(root, "plan_type"))));
     }
 
     // MARK: Claude
@@ -73,7 +95,7 @@ internal static class Usage
     private static async Task<Outcome> FetchClaudeAsync()
     {
         var credentialsFile = Path.Combine(ConfigDir("CLAUDE_CONFIG_DIR", ".claude"), ".credentials.json");
-        var (token, expires) = ParseClaudeCredentials(ReadFile(credentialsFile));
+        var (token, expires, plan) = ParseClaudeCredentials(ReadFile(credentialsFile));
         if (token is null) return new Outcome(null, Strings.Current.ClaudeNoSignIn, SignIn: true);
         // Claude Code renews its sign-in only while it runs, and the desktop app keeps a
         // separate one, so the saved token often expires. Asking with it would just spend
@@ -82,7 +104,7 @@ internal static class Usage
         {
             var expired = new Outcome(null, string.Format(Strings.Current.ClaudeExpiredAt, Strings.Time(e)), SignIn: true);
             if (!await RenewClaudeSignInAsync()) return expired;
-            (token, expires) = ParseClaudeCredentials(ReadFile(credentialsFile));
+            (token, expires, plan) = ParseClaudeCredentials(ReadFile(credentialsFile));
             if (token is null || expires < DateTime.Now) return expired;
         }
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/api/oauth/usage");
@@ -91,7 +113,7 @@ internal static class Usage
         request.Headers.Add("anthropic-beta", "oauth-2025-04-20");
         var reply = await SendAsync(request);
         return Failure(reply.Status, reply.RetryAfter, Provider.Claude, Strings.Current.ClaudeExpired, DateTime.Now)
-            ?? Result(ParseClaudeUsage(reply.Body), Provider.Claude);
+            ?? Result(ParseClaudeUsage(reply.Body) is { } reading ? reading with { Plan = PlanName(plan) } : null, Provider.Claude);
     }
 
     private static DateTime? lastRenewal;
@@ -138,12 +160,16 @@ internal static class Usage
         return null;
     }
 
-    public static (string? Token, DateTime? Expires) ParseClaudeCredentials(string? json)
+    public static (string? Token, DateTime? Expires, string? Plan) ParseClaudeCredentials(string? json)
     {
         var oauth = Get(Parse(json), "claudeAiOauth");
         var token = Text(Get(oauth, "accessToken")) is { Length: > 0 } t ? t : null;
-        return (token, Date(Get(oauth, "expiresAt")));
+        return (token, Date(Get(oauth, "expiresAt")), Text(Get(oauth, "subscriptionType")));
     }
+
+    /// "free" → "Free", "pro" → "Pro"; null when the provider doesn't say.
+    public static string? PlanName(string? plan) =>
+        string.IsNullOrEmpty(plan) ? null : char.ToUpperInvariant(plan![0]) + plan.Substring(1);
 
     /// Turns an unsuccessful reply into an outcome, or returns null for a 2xx reply.
     public static Outcome? Failure(int status, TimeSpan? retryAfter, Provider provider, string expired, DateTime now)
@@ -153,8 +179,8 @@ internal static class Usage
         {
             // Honor Retry-After, within 1 minute to 2 hours; otherwise wait 15 minutes.
             var wait = retryAfter is { } r ? TimeSpan.FromSeconds(Math.Max(60, Math.Min(r.TotalSeconds, 7200))) : TimeSpan.FromMinutes(15);
-            var until = now + wait;
-            return new Outcome(null, RateLimitText(provider, until), until);
+            // No problem text: the last reading stays on screen until the wait is over.
+            return new Outcome(null, RetryAt: now + wait);
         }
         if (status is 401 or 403) return new Outcome(null, expired, SignIn: true);
         return new Outcome(null, UnreachableText(provider));
@@ -175,9 +201,6 @@ internal static class Usage
         return (span, string.Format(t.DayAtTime, day, Strings.Time(reset)));
     }
 
-    public static string RateLimitText(Provider provider, DateTime until) =>
-        string.Format(Strings.Current.RateLimited, provider, Strings.Time(until));
-
     private static string UnreachableText(Provider provider) => string.Format(Strings.Current.Unreachable, provider);
 
     private static Outcome Result(Reading? reading, Provider provider) =>
@@ -185,9 +208,15 @@ internal static class Usage
 
     public static Reading? ParseClaudeUsage(string? json)
     {
-        var window = Get(Parse(json), "five_hour");
-        if (Number(Get(window, "utilization")) is not { } used) return null;
-        return new Reading(Math.Max(0, 100 - (int)Math.Round(used, MidpointRounding.AwayFromZero)), Date(Get(window, "resets_at")));
+        var root = Parse(json);
+        UsageWindow? Window(string key, double seconds)
+        {
+            var window = Get(root, key);
+            if (Number(Get(window, "utilization")) is not { } used) return null;
+            return new UsageWindow(Math.Max(0, 100 - (int)Math.Round(used, MidpointRounding.AwayFromZero)), Date(Get(window, "resets_at")), seconds);
+        }
+        if (Window("five_hour", Reading.FiveHours) is not { } fiveHour) return null;
+        return new Reading(fiveHour, Window("seven_day", Reading.Week));
     }
 
     // MARK: Helpers

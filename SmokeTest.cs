@@ -22,22 +22,27 @@ internal static class SmokeTest
             var codexMs = Usage.ParseCodexUsage("""{"rate_limit":{"primary_window":{"used_percent":"100","reset_at":1792543200000}}}""");
             Check("Codex usage with string percent and millisecond reset", codexMs?.Remaining == 0 && codexMs.Reset == DateTimeOffset.FromUnixTimeSeconds(1792543200).LocalDateTime);
             Check("Codex error response", Usage.ParseCodexUsage("""{"detail":"Unauthorized"}""") is null);
+            var free = Usage.ParseCodexUsage("""{"plan_type":"free","rate_limit":{"primary_window":{"used_percent":53,"limit_window_seconds":2592000,"reset_at":1794932877},"secondary_window":null}}""");
+            Check("Codex free plan: one monthly window", free is { Remaining: 47, Secondary: null, Plan: "Free" } && free.Primary.Seconds == 2592000);
+            var plus = Usage.ParseCodexUsage("""{"plan_type":"plus","rate_limit":{"primary_window":{"used_percent":10,"limit_window_seconds":18000},"secondary_window":{"used_percent":70,"limit_window_seconds":604800,"reset_at":1792543200}}}""");
+            Check("Codex paid plan: five hours and a week", plus is { Remaining: 90, Plan: "Plus" } && plus.Secondary is { Remaining: 30, Seconds: 604800 });
             var (token, account) = Usage.ParseCodexAuth("""{"tokens":{"access_token":"abc","account_id":"acct"}}""");
             Check("Codex auth file", token == "abc" && account == "acct");
             Check("Codex auth missing", Usage.ParseCodexAuth(null).Token is null && Usage.ParseCodexAuth("not json").Token is null);
 
             var claude = Usage.ParseClaudeUsage("""{"five_hour":{"utilization":41.5,"resets_at":"2026-10-20T21:41:00.123456+00:00"},"seven_day":{"utilization":12,"resets_at":null}}""");
             Check("Claude usage", claude?.Remaining == 58 && claude.Reset == new DateTimeOffset(2026, 10, 20, 21, 41, 0, 123, TimeSpan.Zero).AddTicks(4560).LocalDateTime);
+            Check("Claude weekly window", claude?.Secondary is { Remaining: 88, Reset: null, Seconds: Reading.Week } && claude.Primary.Seconds == Reading.FiveHours);
             Check("Claude over limit", Usage.ParseClaudeUsage("""{"five_hour":{"utilization":104}}""")?.Remaining == 0);
             Check("Claude error response", Usage.ParseClaudeUsage("""{"type":"error"}""") is null && Usage.ParseClaudeUsage("[]") is null);
-            var creds = Usage.ParseClaudeCredentials("""{"claudeAiOauth":{"accessToken":"tok","refreshToken":"r","expiresAt":1792543200000}}""");
-            Check("Claude credentials", creds.Token == "tok" && creds.Expires == DateTimeOffset.FromUnixTimeSeconds(1792543200).LocalDateTime);
+            var creds = Usage.ParseClaudeCredentials("""{"claudeAiOauth":{"accessToken":"tok","refreshToken":"r","expiresAt":1792543200000,"subscriptionType":"pro"}}""");
+            Check("Claude credentials", creds.Token == "tok" && creds.Expires == DateTimeOffset.FromUnixTimeSeconds(1792543200).LocalDateTime && Usage.PlanName(creds.Plan) == "Pro");
             Check("Claude credentials empty", Usage.ParseClaudeCredentials("""{"claudeAiOauth":{"accessToken":""}}""").Token is null);
 
             var now = new DateTime(2026, 10, 20, 18, 0, 0);
             Check("Success is not a failure", Usage.Failure(200, null, Provider.Claude, "x", now) is null);
             var limited = Usage.Failure(429, TimeSpan.FromSeconds(1597), Provider.Claude, "x", now);
-            Check("429 honors Retry-After", limited?.RetryAt == now.AddSeconds(1597) && limited.Problem!.Contains("limiting"));
+            Check("429 honors Retry-After, quietly", limited?.RetryAt == now.AddSeconds(1597) && limited.Problem is null);
             Check("429 without Retry-After waits 15 minutes", Usage.Failure(429, null, Provider.Codex, "x", now)?.RetryAt == now.AddMinutes(15));
             Check("429 Retry-After capped at 2 hours", Usage.Failure(429, TimeSpan.FromHours(9), Provider.Codex, "x", now)?.RetryAt == now.AddHours(2));
             Check("401 asks to sign in", Usage.Failure(401, null, Provider.Claude, "expired", now) is { Problem: "expired", RetryAt: null, SignIn: true });
@@ -73,10 +78,14 @@ internal static class SmokeTest
             {
                 var settings = Settings.Load(folder);
                 settings.Provider = Provider.Claude;
-                settings.Store(Provider.Claude, new Reading(37, new DateTime(2026, 10, 20, 21, 41, 0)), now);
+                settings.Store(Provider.Claude, new Reading(new UsageWindow(37, new DateTime(2026, 10, 20, 21, 41, 0), Reading.FiveHours),
+                    new UsageWindow(80, new DateTime(2026, 10, 25, 8, 0, 0), Reading.Week), "Pro"), now);
+                settings.SetRetryTime(Provider.Codex, now.AddMinutes(15));
                 var loaded = Settings.Load(folder);
                 var (cached, cachedAt) = loaded.Cached(Provider.Claude);
                 Check("Settings round trip", loaded.Provider == Provider.Claude && cached?.Remaining == 37 && cachedAt == now && loaded.Cached(Provider.Codex).Reading is null);
+                Check("Settings keep the weekly window and plan", cached is { Plan: "Pro", Secondary: { Remaining: 80, Seconds: Reading.Week } });
+                Check("Settings keep the back-off", loaded.RetryTime(Provider.Codex) == now.AddMinutes(15) && loaded.RetryTime(Provider.Claude) is null);
             }
             finally { Directory.Delete(folder, true); }
 
@@ -109,8 +118,10 @@ internal static class SmokeTest
             using var panel = new MeterPanel(_ => { }, () => { }, () => { }, () => { }, () => { }, () => { });
             var previews = new (string Name, PanelState State)[]
             {
-                ("reading", new PanelState(Provider.Claude, new Reading(58, DateTime.Now.AddHours(2).AddMinutes(14)), null)),
-                ("low", new PanelState(Provider.Codex, new Reading(12, DateTime.Now.AddDays(2)), "Codex is limiting usage checks. Next check at 3:41 PM.")),
+                ("reading", new PanelState(Provider.Claude, new Reading(new UsageWindow(86, DateTime.Now.AddHours(2).AddMinutes(14), Reading.FiveHours),
+                    new UsageWindow(14, DateTime.Now.AddDays(6), Reading.Week), "Pro"), null)),
+                ("free", new PanelState(Provider.Codex, new Reading(new UsageWindow(47, DateTime.Now.AddDays(16), 2592000), null, "Free"), null)),
+                ("problem", new PanelState(Provider.Codex, new Reading(12, DateTime.Now.AddDays(2)), "Couldn't get usage from Codex. Trying again in 5 minutes.")),
                 ("signed-out", new PanelState(Provider.Codex, null, "No Codex sign-in found. Run codex and sign in with ChatGPT.", SignIn: true))
             };
             foreach (var (name, previewState) in previews)
@@ -125,11 +136,12 @@ internal static class SmokeTest
             foreach (var name in new[] { "de-DE", "ja-JP" })
             {
                 Strings.Use(new CultureInfo(name));
-                using var bitmap = panel.Preview(new PanelState(Provider.Claude, new Reading(58, DateTime.Now.AddHours(2).AddMinutes(14)), null), Theme.Light);
+                using var bitmap = panel.Preview(new PanelState(Provider.Claude, new Reading(new UsageWindow(58, DateTime.Now.AddHours(2).AddMinutes(14), Reading.FiveHours),
+                    new UsageWindow(80, DateTime.Now.AddDays(6), Reading.Week), "Pro"), null), Theme.Light);
                 bitmap.Save($"screenshots/panel-reading-{name}.png");
                 using var signedOut = panel.Preview(new PanelState(Provider.Claude, null, Strings.Current.ClaudeNoSignIn, SignIn: true), Theme.Light);
                 signedOut.Save($"screenshots/panel-signed-out-{name}.png");
-                Check($"Panel {name}", bitmap.Height > 100 && signedOut.Height > bitmap.Height);
+                Check($"Panel {name}", bitmap.Height > 100 && signedOut.Height > 100);
             }
             Strings.Use(new CultureInfo("en-US"));
 

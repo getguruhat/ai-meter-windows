@@ -8,13 +8,20 @@ namespace AIMeter;
 
 internal sealed record PanelState(Provider Provider, Reading? Reading, string? Problem, bool SignIn = false);
 
-/// Panel colors, following the Windows "app mode" light/dark setting.
-internal sealed record Theme(Color Back, Color Text, Color Secondary, Color Track, Color Selected, Color Hover, Color Line, Color Warning)
+/// Panel colors, following the Windows "app mode" light/dark setting. The same palette as
+/// the macOS menu (and ServerHat): a grey page, white cards, vivid accents.
+internal sealed record Theme(Color Back, Color Text, Color Secondary, Color Track, Color Selected, Color Hover, Color Line, Color Warning,
+    Color Card, Color Stroke, Color Accent, Color Green, Color Red)
 {
-    public static readonly Theme Light = new(Color.FromArgb(249, 249, 249), Color.FromArgb(27, 27, 27), Color.FromArgb(96, 96, 96),
-        Color.FromArgb(228, 228, 228), Color.White, Color.FromArgb(236, 236, 236), Color.FromArgb(220, 220, 220), Color.FromArgb(176, 92, 0));
-    public static readonly Theme Dark = new(Color.FromArgb(44, 44, 44), Color.White, Color.FromArgb(168, 168, 168),
-        Color.FromArgb(62, 62, 62), Color.FromArgb(92, 92, 92), Color.FromArgb(58, 58, 58), Color.FromArgb(68, 68, 68), Color.FromArgb(255, 159, 10));
+    public static readonly Theme Light = new(Color.FromArgb(243, 244, 247), Color.FromArgb(26, 28, 35), Color.FromArgb(107, 113, 126),
+        Color.FromArgb(226, 227, 231), Color.White, Color.FromArgb(239, 240, 243), Color.FromArgb(226, 227, 231), Color.FromArgb(245, 128, 25),
+        Color.White, Color.FromArgb(20, 0, 0, 0), Color.FromArgb(67, 98, 255), Color.FromArgb(22, 173, 94), Color.FromArgb(225, 58, 58));
+    public static readonly Theme Dark = new(Color.FromArgb(20, 20, 22), Color.FromArgb(245, 246, 248), Color.FromArgb(157, 162, 173),
+        Color.FromArgb(37, 37, 40), Color.FromArgb(52, 53, 58), Color.FromArgb(46, 47, 51), Color.FromArgb(46, 47, 51), Color.FromArgb(255, 157, 67),
+        Color.FromArgb(30, 31, 34), Color.FromArgb(23, 255, 255, 255), Color.FromArgb(82, 111, 255), Color.FromArgb(67, 207, 126), Color.FromArgb(239, 85, 85));
+
+    /// Bar color for what's left: green, orange below 50%, red below 20%.
+    public Color Level(int remaining) => remaining >= 50 ? Green : remaining >= 20 ? Warning : Red;
 
     public static Theme Current
     {
@@ -26,13 +33,14 @@ internal sealed record Theme(Color Back, Color Text, Color Secondary, Color Trac
     }
 }
 
-/// The window that opens from the tray icon, laid out like the macOS menu bar window:
-/// a Codex/Claude switch, what's left, when it resets, any problem, then icon buttons.
+/// The window that opens from the tray icon, laid out like the macOS menu: the Codex/Claude
+/// switch and round icon buttons on one row, then one card with each usage window (what's
+/// left, a colored bar, when it resets), then any problem.
 /// Everything is painted by <see cref="Draw"/>, which also measures the layout when
 /// called without a Graphics.
 internal sealed class MeterPanel : Form
 {
-    private const int PanelWidth = 264;
+    private const int PanelWidth = 300;
     private const TextFormatFlags NoPad = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
 
     [DllImport("dwmapi.dll")]
@@ -50,7 +58,7 @@ internal sealed class MeterPanel : Form
     private readonly string iconFamily;
     private PanelState state = new(Provider.Codex, null, null);
     private Theme theme = Theme.Light;
-    private Font? title, big, strong, body, small, icons;
+    private Font? segment, percent, body, note, small, tag, icons;
     private float scale;
     private int hover = -1;
     private bool rounded, opensUpward = true;
@@ -153,14 +161,15 @@ internal sealed class MeterPanel : Form
         if (DeviceDpi / 96f != scale)
         {
             scale = DeviceDpi / 96f;
-            foreach (var font in new[] { title, big, strong, body, small, icons }) font?.Dispose();
+            foreach (var font in new[] { segment, percent, body, note, small, tag, icons }) font?.Dispose();
             Font Make(string family, float px, FontStyle style = FontStyle.Regular) => new(family, px * scale, style, GraphicsUnit.Pixel);
-            title = Make("Segoe UI Semibold", 16);
-            big = Make("Segoe UI Semibold", 32);
-            strong = Make("Segoe UI Semibold", 13);
+            segment = Make("Segoe UI Semibold", 12);
+            percent = Make("Segoe UI Semibold", 15);
             body = Make("Segoe UI", 13);
-            small = Make("Segoe UI", 12);
-            icons = Make(iconFamily, 16);
+            note = Make("Segoe UI", 12);
+            small = Make("Segoe UI", 11);
+            tag = Make("Segoe UI Semibold", 10);
+            icons = Make(iconFamily, 13);
         }
         var bottom = Bottom;
         Size = new Size(S(PanelWidth), Draw(null));
@@ -213,88 +222,149 @@ internal sealed class MeterPanel : Form
     private int Draw(Graphics? g)
     {
         targets.Clear();
-        var text = Strings.Current;
-        var pad = S(16);
+        var pad = S(12);
         var inner = S(PanelWidth) - pad * 2;
         var y = pad;
 
-        // Provider switch, like the macOS segmented control.
-        var track = new Rectangle(pad, y, inner, S(30));
-        Fill(g, track, theme.Track, S(8));
+        // Top row: the provider switch, then the icon buttons as circles.
+        var button = S(30);
+        var gap = S(6);
+        var buttonsWidth = buttons.Length * button + (buttons.Length - 1) * gap;
+        var track = new Rectangle(pad, y, inner - buttonsWidth - gap, button);
+        Fill(g, track, theme.Track, track.Height / 2);
         var providers = (Provider[])Enum.GetValues(typeof(Provider));
-        var segment = (track.Width - S(4)) / providers.Length;
+        var inset = S(3);
+        var slot = (track.Width - inset * 2) / providers.Length;
         for (var i = 0; i < providers.Length; i++)
         {
             var provider = providers[i];
-            var rect = new Rectangle(track.X + S(2) + i * segment, track.Y + S(2), segment, track.Height - S(4));
+            var rect = new Rectangle(track.X + inset + i * slot, track.Y + inset, slot, track.Height - inset * 2);
             var selected = provider == state.Provider;
             var index = Target(rect, "", () => select(provider));
-            if (selected) Fill(g, rect, theme.Selected, S(6));
-            else if (hover == index) Fill(g, rect, theme.Hover, S(6));
-            Write(g, provider.ToString(), selected ? strong! : body!, rect, theme.Text, NoPad | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        }
-        y = track.Bottom + S(14);
-
-        if (state.Reading is { } reading)
-        {
-            // "59% remaining", with both parts sharing a baseline.
-            var number = $"{reading.Remaining}%";
-            var size = TextRenderer.MeasureText(number, big, Size.Empty, NoPad);
-            Write(g, number, big!, new Rectangle(pad, y, size.Width, size.Height), theme.Text, NoPad);
-            var label = TextRenderer.MeasureText(text.Remaining, body, Size.Empty, NoPad);
-            var labelY = y + (int)(Ascent(big!) - Ascent(body!));
-            Write(g, text.Remaining, body!, new Rectangle(pad + size.Width + S(6), labelY, label.Width, label.Height), theme.Secondary, NoPad);
-            y += size.Height + S(8);
-
-            var bar = new Rectangle(pad, y, inner, S(6));
-            Fill(g, bar, theme.Track, bar.Height / 2);
-            if (reading.Remaining > 0)
-                Fill(g, bar with { Width = Math.Max(bar.Height, bar.Width * Math.Min(reading.Remaining, 100) / 100) }, MeterIcon.ColorFor(reading.Remaining), bar.Height / 2);
-            y = bar.Bottom + S(14);
-
-            if (reading.Reset is { } reset)
+            if (selected)
             {
-                var (inText, atText) = Usage.ResetText(reset, DateTime.Now);
-                y += Line(g, inText, strong!, theme.Text, pad, y, inner) + S(2);
-                y += Line(g, char.ToUpper(atText[0]) + atText.Substring(1), small!, theme.Secondary, pad, y, inner);
+                // A soft white pill with a faint shadow, quiet next to the colored bars.
+                Fill(g, rect with { Y = rect.Y + Math.Max(1, S(1)) }, Color.FromArgb(28, 0, 0, 0), rect.Height / 2);
+                Fill(g, rect, theme.Selected, rect.Height / 2);
             }
-            else y += Line(g, text.ResetNotReported, small!, theme.Secondary, pad, y, inner);
+            else if (hover == index) Fill(g, rect, theme.Hover, rect.Height / 2);
+            Write(g, provider.ToString(), segment!, rect, selected ? theme.Text : theme.Secondary, NoPad | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
-        else
-        {
-            y += Line(g, text.Unavailable, title!, theme.Text, pad, y, inner) + S(2);
-            y += Line(g, text.UnavailableHint, small!, theme.Secondary, pad, y, inner);
-        }
-
-        if (state.Problem is { } problem) y += S(10) + Line(g, problem, small!, theme.Warning, pad, y + S(10), inner);
-        if (state.SignIn)
-        {
-            // Links to the troubleshooting guide, like the macOS menu's link.
-            // Wraps when a translation is longer than the panel is wide.
-            var flags = NoPad | TextFormatFlags.WordBreak;
-            var size = TextRenderer.MeasureText(text.Troubleshooting, strong, new Size(inner, int.MaxValue), flags);
-            var link = new Rectangle(pad - S(6), y + S(6), size.Width + S(12), size.Height + S(8));
-            if (hover == Target(link, "", troubleshooting)) Fill(g, link, theme.Hover, S(6));
-            Write(g, text.Troubleshooting, strong!, new Rectangle(link.X + S(6), link.Y + S(4), size.Width, size.Height), theme.Text, flags);
-            y = link.Bottom;
-        }
-
-        y += S(14);
-        if (g is not null) { using var pen = new Pen(theme.Line, Math.Max(1, scale)); g.DrawLine(pen, pad, y, pad + inner, y); }
-        y += S(10);
-
-        // Icon buttons, centered, like the macOS window's Refresh / About / Quit row.
-        var buttonSize = new Size(S(44), S(34));
-        var spacing = S(10);
-        var x = pad + (inner - (buttons.Length * buttonSize.Width + (buttons.Length - 1) * spacing)) / 2;
+        var x = track.Right + gap;
         foreach (var (glyph, tipText, click) in buttons)
         {
-            var rect = new Rectangle(new Point(x, y), buttonSize);
-            if (hover == Target(rect, tipText, click)) Fill(g, rect, theme.Hover, S(6));
+            var rect = new Rectangle(x, y, button, button);
+            Bordered(g, rect, hover == Target(rect, tipText, click) ? theme.Hover : theme.Card, button / 2);
             Write(g, glyph, icons!, rect, theme.Text, NoPad | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            x += buttonSize.Width + spacing;
+            x += button + gap;
         }
-        return y + buttonSize.Height + S(10);
+        y = track.Bottom + S(10);
+
+        // One card for every usage window (or for "unavailable"), measured first so its
+        // background can be painted under the text.
+        var cardPad = S(12);
+        var radius = S(16);
+        var cardHeight = CardContent(null, pad + cardPad, 0, inner - cardPad * 2) + cardPad * 2;
+        Bordered(g, new Rectangle(pad, y, inner, cardHeight), theme.Card, radius);
+        CardContent(g, pad + cardPad, y + cardPad, inner - cardPad * 2);
+        y += cardHeight;
+
+        if (state.Problem is { } problem)
+        {
+            var problemHeight = Problem(null, pad + cardPad, 0, inner - cardPad * 2) + cardPad * 2;
+            y += S(10);
+            Bordered(g, new Rectangle(pad, y, inner, problemHeight), theme.Card, radius);
+            Problem(g, pad + cardPad, y + cardPad, inner - cardPad * 2);
+            y += problemHeight;
+        }
+        return y + pad;
+    }
+
+    /// The usage windows inside the card, separated by a line; returns their height.
+    private int CardContent(Graphics? g, int x, int y, int width)
+    {
+        var text = Strings.Current;
+        if (state.Reading is not { } reading)
+        {
+            var top = y;
+            y += Line(g, text.Unavailable, percent!, theme.Text, x, y, width) + S(4);
+            y += Line(g, text.UnavailableHint, small!, theme.Secondary, x, y, width);
+            return y - top;
+        }
+        var start = y;
+        y += Meter(g, reading.Primary, reading.Plan, x, y, width);
+        if (reading.Secondary is { } secondary)
+        {
+            y += S(12);
+            if (g is not null) { using var pen = new Pen(theme.Line, Math.Max(1, scale)); g.DrawLine(pen, x, y, x + width, y); }
+            y += S(12);
+            y += Meter(g, secondary, null, x, y, width);
+        }
+        return y - start;
+    }
+
+    /// One usage window: its name (with the plan beside the first one), what's left, a bar
+    /// colored by how much is left, and when it resets. Returns its height.
+    private int Meter(Graphics? g, UsageWindow window, string? plan, int x, int y, int width)
+    {
+        var text = Strings.Current;
+        var start = y;
+        // Named by its length: Codex's free plan has a single monthly window.
+        var name = window.Seconds < 86_400 ? text.FiveHour : window.Seconds < 8 * 86_400 ? text.Weekly : text.Monthly;
+        var left = string.Format(text.PercentLeft, window.Remaining);
+        var leftSize = TextRenderer.MeasureText(left, percent, Size.Empty, NoPad);
+        var nameSize = TextRenderer.MeasureText(name, body, Size.Empty, NoPad);
+        var row = Math.Max(leftSize.Height, nameSize.Height);
+        Write(g, name, body!, new Rectangle(x, y + (row - nameSize.Height) / 2, nameSize.Width, nameSize.Height), theme.Secondary, NoPad);
+        Write(g, left, percent!, new Rectangle(x + width - leftSize.Width, y + (row - leftSize.Height) / 2, leftSize.Width, leftSize.Height), theme.Text, NoPad);
+        if (plan is not null)
+        {
+            var label = string.Format(text.Plan, plan);
+            var labelSize = TextRenderer.MeasureText(label, tag, Size.Empty, NoPad);
+            var pill = new Rectangle(x + nameSize.Width + S(6), y + (row - labelSize.Height - S(4)) / 2, labelSize.Width + S(14), labelSize.Height + S(4));
+            // Only when it fits between the name and the percentage.
+            if (pill.Right + S(6) <= x + width - leftSize.Width)
+            {
+                Fill(g, pill, Color.FromArgb(31, theme.Accent), pill.Height / 2);
+                Write(g, label, tag!, pill, theme.Accent, NoPad | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+        }
+        y += row + S(6);
+
+        var bar = new Rectangle(x, y, width, S(7));
+        Fill(g, bar, theme.Hover, bar.Height / 2);
+        if (window.Remaining > 0)
+            Fill(g, bar with { Width = Math.Max(bar.Height, bar.Width * Math.Min(window.Remaining, 100) / 100) }, theme.Level(window.Remaining), bar.Height / 2);
+        y = bar.Bottom + S(6);
+
+        if (window.Reset is { } reset)
+        {
+            var (inText, atText) = Usage.ResetText(reset, DateTime.Now);
+            y += Line(g, $"{inText} · {atText}", small!, theme.Secondary, x, y, width);
+        }
+        else y += Line(g, text.ResetNotReported, small!, theme.Secondary, x, y, width);
+        return y - start;
+    }
+
+    /// A problem with a warning sign, and the troubleshooting link for sign-in problems.
+    private int Problem(Graphics? g, int x, int y, int width)
+    {
+        var text = Strings.Current;
+        var start = y;
+        var sign = S(18);
+        Write(g, "", icons!, new Rectangle(x, y, sign, sign), theme.Warning, NoPad | TextFormatFlags.HorizontalCenter);
+        y += Math.Max(sign, Line(g, state.Problem ?? "", note!, theme.Text, x + sign + S(8), y, width - sign - S(8)));
+        if (state.SignIn)
+        {
+            // Wraps when a translation is longer than the card is wide.
+            var flags = NoPad | TextFormatFlags.WordBreak;
+            var size = TextRenderer.MeasureText(text.Troubleshooting, segment, new Size(width, int.MaxValue), flags);
+            var link = new Rectangle(x - S(6), y + S(4), size.Width + S(12), size.Height + S(8));
+            if (hover == Target(link, "", troubleshooting)) Fill(g, link, theme.Hover, S(6));
+            Write(g, text.Troubleshooting, segment!, new Rectangle(link.X + S(6), link.Y + S(4), size.Width, size.Height), theme.Accent, flags);
+            y = link.Bottom;
+        }
+        return y - start;
     }
 
     private int Target(Rectangle rect, string tipText, Action click)
@@ -302,9 +372,6 @@ internal sealed class MeterPanel : Form
         targets.Add((rect, tipText, click));
         return targets.Count - 1;
     }
-
-    private static float Ascent(Font font) =>
-        font.Size * font.FontFamily.GetCellAscent(font.Style) / font.FontFamily.GetEmHeight(font.Style);
 
     /// Writes wrapped text at (x, y) and returns its height.
     private static int Line(Graphics? g, string text, Font font, Color color, int x, int y, int width)
@@ -320,18 +387,34 @@ internal sealed class MeterPanel : Form
         if (g is not null) TextRenderer.DrawText(g, text, font, rect, color, flags);
     }
 
-    private static void Fill(Graphics? g, Rectangle rect, Color color, int radius)
+    private static GraphicsPath Round(Rectangle rect, int radius)
     {
-        if (g is null) return;
-        var d = Math.Min(radius * 2, Math.Min(rect.Width, rect.Height));
-        using var path = new GraphicsPath();
+        var d = Math.Max(1, Math.Min(radius * 2, Math.Min(rect.Width, rect.Height)));
+        var path = new GraphicsPath();
         path.AddArc(rect.X, rect.Y, d, d, 180, 90);
         path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
         path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
         path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
         path.CloseFigure();
+        return path;
+    }
+
+    private static void Fill(Graphics? g, Rectangle rect, Color color, int radius)
+    {
+        if (g is null) return;
+        using var path = Round(rect, radius);
         using var brush = new SolidBrush(color);
         g.FillPath(brush, path);
+    }
+
+    /// A filled shape with a hairline border, like the macOS cards and buttons.
+    private void Bordered(Graphics? g, Rectangle rect, Color color, int radius)
+    {
+        if (g is null) return;
+        Fill(g, rect, color, radius);
+        using var path = Round(new Rectangle(rect.X, rect.Y, rect.Width - 1, rect.Height - 1), radius);
+        using var pen = new Pen(theme.Stroke, Math.Max(1, scale));
+        g.DrawPath(pen, path);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -375,7 +458,7 @@ internal sealed class MeterPanel : Form
         {
             clock.Dispose();
             tip.Dispose();
-            foreach (var font in new[] { title, big, strong, body, small, icons }) font?.Dispose();
+            foreach (var font in new[] { segment, percent, body, note, small, tag, icons }) font?.Dispose();
         }
         base.Dispose(disposing);
     }

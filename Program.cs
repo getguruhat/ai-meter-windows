@@ -25,10 +25,24 @@ internal static class Program
     }
 }
 
+internal sealed class CachedWindow
+{
+    public int Remaining { get; set; }
+    public DateTime? Reset { get; set; }
+    public double Seconds { get; set; }
+
+    public static CachedWindow? From(UsageWindow? w) => w is null ? null : new() { Remaining = w.Remaining, Reset = w.Reset, Seconds = w.Seconds };
+    public UsageWindow ToWindow(double fallback) => new(Remaining, Reset, Seconds > 0 ? Seconds : fallback);
+}
+
 internal sealed class CachedReading
 {
     public int Remaining { get; set; }
     public DateTime? Reset { get; set; }
+    /// The window's length; 0 in settings saved before it was stored, which means five hours.
+    public double Seconds { get; set; }
+    public CachedWindow? Weekly { get; set; }
+    public string? Plan { get; set; }
     public DateTime? Updated { get; set; }
 }
 
@@ -45,6 +59,9 @@ internal sealed class Settings
     public Dictionary<string, CachedReading> Cache { get; set; } = [];
     /// The newest version the update dialog was shown for, so it asks once per version.
     public string? AnnouncedUpdate { get; set; }
+    /// When a provider asked us to back off, no request is sent to it before this time.
+    /// Saved, so restarting the app doesn't skip the wait.
+    public Dictionary<string, DateTime> RetryAt { get; set; } = [];
 
     public static Settings Load(string? folder = null)
     {
@@ -59,12 +76,28 @@ internal sealed class Settings
     }
 
     public (Reading? Reading, DateTime? Updated) Cached(Provider provider) =>
-        Cache.TryGetValue(provider.ToString(), out var c) ? (new Reading(c.Remaining, c.Reset), c.Updated) : (null, null);
+        Cache.TryGetValue(provider.ToString(), out var c)
+            ? (new Reading(new UsageWindow(c.Remaining, c.Reset, c.Seconds > 0 ? c.Seconds : Reading.FiveHours),
+                           c.Weekly?.ToWindow(Reading.Week), c.Plan), c.Updated)
+            : (null, null);
 
     public void Store(Provider provider, Reading? reading, DateTime? updated = null)
     {
         if (reading is null) Cache.Remove(provider.ToString());
-        else Cache[provider.ToString()] = new CachedReading { Remaining = reading.Remaining, Reset = reading.Reset, Updated = updated };
+        else Cache[provider.ToString()] = new CachedReading
+        {
+            Remaining = reading.Remaining, Reset = reading.Reset, Seconds = reading.Primary.Seconds,
+            Weekly = CachedWindow.From(reading.Secondary), Plan = reading.Plan, Updated = updated
+        };
+        Save();
+    }
+
+    public DateTime? RetryTime(Provider provider) => RetryAt.TryGetValue(provider.ToString(), out var until) ? until : null;
+
+    public void SetRetryTime(Provider provider, DateTime? until)
+    {
+        if (until is { } u) RetryAt[provider.ToString()] = u;
+        else if (!RetryAt.Remove(provider.ToString())) return;
         Save();
     }
 
@@ -132,15 +165,6 @@ internal static class MeterIcon
 {
     [DllImport("user32.dll")]
     private static extern bool DestroyIcon(IntPtr handle);
-
-    /// Bar color in the panel: green, then amber below 50%, red below 20%.
-    public static Color ColorFor(int? remaining) => remaining switch
-    {
-        null => Color.FromArgb(107, 114, 128),
-        >= 50 => Color.FromArgb(34, 139, 74),
-        >= 20 => Color.FromArgb(214, 137, 16),
-        _ => Color.FromArgb(205, 50, 40)
-    };
 
     /// The taskbar follows the Windows "system" mode, not the "app" mode the panel uses.
     public static bool LightTaskbar
@@ -224,8 +248,6 @@ internal sealed class MeterContext : ApplicationContext
     private Reading? reading;
     private string? problem;
     private bool signIn;
-    /// When a provider asked us to back off, no request is sent to it before this time.
-    private readonly Dictionary<Provider, DateTime> retryAt = [];
     private Icon? icon;
     private bool refreshing;
 
@@ -321,13 +343,8 @@ internal sealed class MeterContext : ApplicationContext
         try
         {
             var provider = settings.Provider;
-            if (retryAt.TryGetValue(provider, out var until) && until > DateTime.Now)
-            {
-                problem = Usage.RateLimitText(provider, until);
-                signIn = false;
-                Render();
-                return;
-            }
+            // While the provider has asked us to back off, quietly keep the last reading.
+            if (settings.RetryTime(provider) is { } until && until > DateTime.Now) return;
             var outcome = await Usage.FetchAsync(provider);
             if (provider != settings.Provider) return;
             if (outcome.Reading is { } result)
@@ -335,16 +352,17 @@ internal sealed class MeterContext : ApplicationContext
                 reading = result;
                 problem = null;
                 signIn = false;
-                retryAt.Remove(provider);
+                settings.SetRetryTime(provider, null);
                 settings.Store(provider, result, DateTime.Now);
             }
             else
             {
                 problem = outcome.Problem;
                 signIn = outcome.SignIn;
-                if (outcome.RetryAt is { } next) retryAt[provider] = next;
+                if (outcome.RetryAt is { } next) settings.SetRetryTime(provider, next);
                 // A failed check keeps the last good reading, unless its window has already reset.
                 if (reading?.Reset is { } r && r < DateTime.Now) { reading = null; settings.Store(provider, null); }
+                else if (reading?.Secondary?.Reset is { } w && w < DateTime.Now) { reading = reading with { Secondary = null }; settings.Store(provider, reading, settings.Cached(provider).Updated); }
             }
             Render();
         }
