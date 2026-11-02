@@ -157,6 +157,12 @@ internal static class Startup
         }
     }
 
+    /// The Microsoft Store version's startup task is held on or off by Windows: the user
+    /// turned it off in Windows' Startup apps settings, or a policy decides. Only Windows'
+    /// settings can change it then.
+    public static bool ManagedByWindows =>
+        Packaged && GetTask().State is StartupTaskState.DisabledByUser or StartupTaskState.DisabledByPolicy or StartupTaskState.EnabledByPolicy;
+
     private static StartupTask GetTask() =>
         Task.Run(async () => await StartupTask.GetAsync(TaskId)).GetAwaiter().GetResult();
 }
@@ -256,7 +262,7 @@ internal sealed class MeterContext : ApplicationContext
     public MeterContext()
     {
         reading = settings.Cached(settings.Provider).Reading;
-        panel = new MeterPanel(Select, () => _ = RefreshAsync(), () => AboutWindow.ShowShared(() => Open(DonationUrl)), () => Open(DonationUrl), Quit, () => Open(settings.Provider == Provider.Codex ? TroubleshootingUrl + "#codex" : TroubleshootingUrl));
+        panel = new MeterPanel(Select, () => _ = RefreshAsync(), () => SettingsWindow.ShowShared(() => Open(DonationUrl)), Quit, () => Open(settings.Provider == Provider.Codex ? TroubleshootingUrl + "#codex" : TroubleshootingUrl));
         startup.Click += (_, _) => { Startup.Enabled = !Startup.Enabled; startup.Checked = Startup.Enabled; };
         taskbarText.Click += (_, _) =>
         {
@@ -308,17 +314,18 @@ internal sealed class MeterContext : ApplicationContext
             };
             updateTimer.Start();
         }
-        // "Start with Windows" is otherwise only in the right-click menu, so ask once.
+        // "Start with Windows" is otherwise only in Settings and the right-click menu, so ask once.
         if (!settings.AskedStartup) Application.Idle += AskStartup;
     }
 
-    /// Runs once the tray icon is up, and only asks if AI Meter doesn't already start with Windows.
+    /// Runs once the tray icon is up, and only asks if AI Meter doesn't already start with
+    /// Windows and Windows' own Startup apps settings aren't holding it off.
     private void AskStartup(object? sender, EventArgs e)
     {
         Application.Idle -= AskStartup;
         settings.AskedStartup = true;
         settings.Save();
-        if (Startup.Enabled) return;
+        if (Startup.Enabled || Startup.ManagedByWindows) return;
         if (MessageBox.Show(Strings.Current.StartupQuestion, "AI Meter", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             Startup.Enabled = true;
     }
@@ -391,13 +398,16 @@ internal sealed class MeterContext : ApplicationContext
         var summary = reading is null ? text.TipUnavailable : string.Format(text.TipLeft, reading.Remaining);
         if (reading?.Reset is { } when) summary += ", " + string.Format(text.TipResets, Usage.ResetText(when, DateTime.Now).At);
         var tip = $"AI Meter · {settings.Provider}: {summary}";
-        tray.Text = tip.Length > 127 ? tip.Substring(0, 127) : tip;
-        label.SetText(reading is null ? "AI –" : $"AI {reading.Remaining}%", tip);
+        tray.Text = TrayTip(tip);
+        label.SetText(reading is null ? $"{text.Label} –" : $"{text.Label} {reading.Remaining}%", tip);
         var old = icon;
         icon = MeterIcon.Create(reading?.Remaining);
         tray.Icon = icon;
         MeterIcon.Release(old);
     }
+
+    /// .NET Framework's NotifyIcon throws past 63 characters (.NET 5+ allows 127).
+    public static string TrayTip(string tip) => tip.Length > 63 ? tip.Substring(0, 63) : tip;
 
     private void OnPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
     {

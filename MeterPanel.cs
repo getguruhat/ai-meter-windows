@@ -65,7 +65,7 @@ internal sealed class MeterPanel : Form
     private Point anchor;
     private DateTime hiddenAt;
 
-    public MeterPanel(Action<Provider> select, Action refresh, Action about, Action support, Action quit, Action troubleshooting)
+    public MeterPanel(Action<Provider> select, Action refresh, Action settings, Action quit, Action troubleshooting)
     {
         this.select = select;
         this.troubleshooting = troubleshooting;
@@ -76,8 +76,7 @@ internal sealed class MeterPanel : Form
         buttons =
         [
             ("", text.Refresh, refresh),
-            ("", text.About, about),
-            ("", text.Support, support),
+            ("", text.Settings, settings), // Setting (gear)
             ("", text.Quit, quit)
         ];
         FormBorderStyle = FormBorderStyle.None;

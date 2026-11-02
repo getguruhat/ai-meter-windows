@@ -64,9 +64,14 @@ internal static class SmokeTest
                 try { foreach (var format in formats) _ = string.Format(format, "x", "y"); _ = strings.DayName(now); }
                 catch (FormatException) { works = false; }
                 Check($"Strings {name}", strings.Remaining != "remaining" && works && formats.All(f => f.Length > 0));
+                // The settings and startup text is translated too, not left in English.
+                Check($"Settings strings {name}", strings.Settings != "Settings" && strings.StartupQuestion != Strings.For(new CultureInfo("en-US")).StartupQuestion
+                    && strings.StartupOffInWindows != "Turned off in Windows settings." && strings.OpenStartupApps != "Open Startup apps settings ›");
             }
             Check("Traditional Chinese falls back to English", Strings.For(new CultureInfo("zh-TW")).Remaining == "remaining");
             Check("Regional German uses German", Strings.For(new CultureInfo("de-AT")).Remaining == "verbleibend");
+            Check("Taskbar label in each language", new[] { ("es-MX", "IA"), ("fr-FR", "IA"), ("pt-BR", "IA"), ("de-DE", "KI"), ("ja-JP", "AI"), ("en-US", "AI") }
+                .All(l => Strings.For(new CultureInfo(l.Item1)).Label == l.Item2));
             Strings.Use(new CultureInfo("de-DE"));
             Check("German reset text", Usage.ResetText(now.AddHours(2).AddMinutes(14), now) is ("Zurücksetzung in 2 Std. 14 Min.", var deAt) && deAt.StartsWith("heute um"));
             Strings.Use(new CultureInfo("ja-JP"));
@@ -104,6 +109,13 @@ internal static class SmokeTest
                     }
                 }
             using (var icon = MeterIcon.Create(41)) Check("Tray icon handle", icon.Width > 0);
+            // A long tooltip, like Spanish with a reset time, must fit the tray icon's limit.
+            using (var notify = new NotifyIcon())
+            {
+                var tip = "AI Meter · Codex: 79% restante, se reinicia mañana a las 18:30 (Plus)";
+                notify.Text = MeterContext.TrayTip(tip);
+                Check("Long tray tooltip", notify.Text.Length <= 63 && tip.StartsWith(notify.Text));
+            }
 
             foreach (var (themeName, light) in new[] { ("light", true), ("dark", false) })
                 foreach (var scale in new[] { 1f, 1.5f })
@@ -115,7 +127,7 @@ internal static class SmokeTest
                     Check($"Taskbar label {name}", bitmap.GetPixel(0, 0).A == 1 && bitmap.Width > bitmap.Height && ink.Count > 0 && ink.All(p => light ? p.R <= 5 : p.R >= 250));
                 }
 
-            using var panel = new MeterPanel(_ => { }, () => { }, () => { }, () => { }, () => { }, () => { });
+            using var panel = new MeterPanel(_ => { }, () => { }, () => { }, () => { }, () => { });
             var previews = new (string Name, PanelState State)[]
             {
                 ("reading", new PanelState(Provider.Claude, new Reading(new UsageWindow(86, DateTime.Now.AddHours(2).AddMinutes(14), Reading.FiveHours),
@@ -145,16 +157,31 @@ internal static class SmokeTest
             }
             Strings.Use(new CultureInfo("en-US"));
 
-            Check("Version", AboutWindow.Version.Count(c => c == '.') == 2);
-            using var about = new AboutWindow(() => { });
+            Check("Version", SettingsWindow.Version.Count(c => c == '.') == 2);
+            using var settingsWindow = new SettingsWindow(() => { });
             foreach (var (themeName, look) in new[] { ("light", Theme.Light), ("dark", Theme.Dark) })
             {
-                using var bitmap = about.Preview(look);
-                bitmap.Save($"screenshots/about-{themeName}.png");
-                // The embedded app icon is drawn at the top center.
-                Check($"About {themeName}", bitmap.Height > 300 && bitmap.GetPixel(3, 3).ToArgb() == look.Back.ToArgb()
-                    && bitmap.GetPixel(bitmap.Width / 2, (int)(98 * bitmap.Height / 430f)).ToArgb() != look.Back.ToArgb());
+                using var on = settingsWindow.Preview(look, startupOn: true, managedByWindows: false);
+                using var off = settingsWindow.Preview(look, startupOn: false, managedByWindows: false);
+                using var managed = settingsWindow.Preview(look, startupOn: false, managedByWindows: true);
+                on.Save($"screenshots/settings-{themeName}.png");
+                off.Save($"screenshots/settings-startup-off-{themeName}.png");
+                managed.Save($"screenshots/settings-startup-managed-{themeName}.png");
+                // The embedded app icon is drawn at the top center; the switch changes the picture;
+                // when Windows holds the setting, a note and a link are added below it.
+                var scale = on.Width / 390f;
+                Check($"Settings {themeName}", on.Height > 300 && on.GetPixel(3, 3).ToArgb() == look.Back.ToArgb()
+                    && on.GetPixel(on.Width / 2, (int)(84 * scale)).ToArgb() != look.Back.ToArgb());
+                Check($"Settings switch {themeName}", on.Height == off.Height && !SamePixels(on, off) && managed.Height > off.Height);
             }
+            Strings.Use(new CultureInfo("es-ES"));
+            using (var spanish = new SettingsWindow(() => { }))
+            using (var bitmap = spanish.Preview(Theme.Light, startupOn: false, managedByWindows: true))
+            {
+                bitmap.Save("screenshots/settings-startup-managed-es-ES.png");
+                Check("Settings es-ES", bitmap.Height > 300);
+            }
+            Strings.Use(new CultureInfo("en-US"));
         }
         catch (Exception error)
         {
@@ -166,4 +193,7 @@ internal static class SmokeTest
         File.WriteAllLines("smoke-test.log", Log);
         return failures == 0 ? 0 : 1;
     }
+
+    private static bool SamePixels(Bitmap a, Bitmap b) =>
+        a.Size == b.Size && Enumerable.Range(0, a.Width * a.Height).All(i => a.GetPixel(i % a.Width, i / a.Width) == b.GetPixel(i % a.Width, i / a.Width));
 }

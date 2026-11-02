@@ -3,7 +3,7 @@ using System.Globalization;
 namespace AIMeter;
 
 /// The app's text in the Windows display language, with English for any other language.
-/// "AI Meter", the provider names, and the "AI 79%" label are the same in every language.
+/// "AI Meter" and the provider names are the same in every language.
 /// Any property a translation doesn't set stays English. Templates take {0}, {1} like string.Format.
 internal sealed record Strings
 {
@@ -33,9 +33,12 @@ internal sealed record Strings
     public string UnavailableHint { get; init; } = "Reset time shows once usage can be read.";
     public string Troubleshooting { get; init; } = "Open the troubleshooting guide ›";
     public string Refresh { get; init; } = "Refresh";
-    public string About { get; init; } = "About AI Meter";
+    public string Settings { get; init; } = "Settings";
     public string Support { get; init; } = "Support AI Meter";
     public string Quit { get; init; } = "Quit";
+
+    /// The "AI" in the "AI 79%" taskbar label.
+    public string Label { get; init; } = "AI";
 
     // Right-click menu
     public string RefreshNow { get; init; } = "Refresh now";
@@ -43,6 +46,11 @@ internal sealed record Strings
     public string StartWithWindows { get; init; } = "Start with Windows";
     public string StartupBlocked { get; init; } = "Windows has AI Meter turned off at startup. Turn it on in Settings › Apps › Startup.";
     public string StartupQuestion { get; init; } = "Start AI Meter automatically when you sign in to Windows?\n\nYou can change this anytime: right-click AI Meter on the taskbar and choose Start with Windows.";
+
+    // Starting with Windows (Settings window, and the Microsoft Store version's first launch)
+    public string StartupOffInWindows { get; init; } = "Turned off in Windows settings.";
+    public string StartupOnInWindows { get; init; } = "Turned on by your organization's policy.";
+    public string OpenStartupApps { get; init; } = "Open Startup apps settings ›";
 
     // About window
     public string Version { get; init; } = "Version {0}";
@@ -102,14 +110,18 @@ internal sealed record Strings
             UnavailableHint = "La hora de reinicio aparecerá cuando se pueda leer el uso.",
             Troubleshooting = "Abrir la guía de solución de problemas ›",
             Refresh = "Actualizar",
-            About = "Acerca de AI Meter",
+            Settings = "Configuración",
             Support = "Apoyar AI Meter",
             Quit = "Salir",
+            Label = "IA",
             RefreshNow = "Actualizar ahora",
-            ShowOnTaskbar = "Mostrar AI % en la barra de tareas",
+            ShowOnTaskbar = "Mostrar IA % en la barra de tareas",
             StartWithWindows = "Iniciar con Windows",
             StartupBlocked = "Windows tiene AI Meter desactivado al inicio. Actívalo en Configuración › Aplicaciones › Inicio.",
             StartupQuestion = "¿Iniciar AI Meter automáticamente al iniciar sesión en Windows?\n\nPuedes cambiarlo cuando quieras: haz clic con el botón derecho en AI Meter en la barra de tareas y elige Iniciar con Windows.",
+            StartupOffInWindows = "Desactivado en la configuración de Windows.",
+            StartupOnInWindows = "Activado por la directiva de tu organización.",
+            OpenStartupApps = "Abrir la configuración de aplicaciones de inicio ›",
             Version = "Versión {0}",
             Tagline = "Una herramienta de código abierto de GuruHat",
             Thanks = "¡Gracias por apoyar este proyecto!",
@@ -149,14 +161,18 @@ internal sealed record Strings
             UnavailableHint = "Der Zeitpunkt des Zurücksetzens erscheint, sobald die Nutzung gelesen werden kann.",
             Troubleshooting = "Anleitung zur Fehlerbehebung öffnen ›",
             Refresh = "Aktualisieren",
-            About = "Über AI Meter",
+            Settings = "Einstellungen",
             Support = "AI Meter unterstützen",
             Quit = "Beenden",
             RefreshNow = "Jetzt aktualisieren",
-            ShowOnTaskbar = "AI % in der Taskleiste anzeigen",
+            Label = "KI",
+            ShowOnTaskbar = "KI % in der Taskleiste anzeigen",
             StartWithWindows = "Mit Windows starten",
             StartupBlocked = "Windows hat AI Meter beim Start deaktiviert. Aktivieren Sie es unter Einstellungen › Apps › Autostart.",
             StartupQuestion = "AI Meter automatisch starten, wenn Sie sich bei Windows anmelden?\n\nSie können das jederzeit ändern: Klicken Sie mit der rechten Maustaste auf AI Meter in der Taskleiste und wählen Sie Mit Windows starten.",
+            StartupOffInWindows = "In den Windows-Einstellungen deaktiviert.",
+            StartupOnInWindows = "Durch eine Richtlinie Ihrer Organisation aktiviert.",
+            OpenStartupApps = "Autostart-Einstellungen öffnen ›",
             Version = "Version {0}",
             Tagline = "Ein Open-Source-Tool von GuruHat",
             Thanks = "Vielen Dank für Ihre Unterstützung!",
@@ -196,14 +212,18 @@ internal sealed record Strings
             UnavailableHint = "L'heure de réinitialisation s'affichera dès que l'utilisation pourra être lue.",
             Troubleshooting = "Ouvrir le guide de dépannage ›",
             Refresh = "Actualiser",
-            About = "À propos d'AI Meter",
+            Settings = "Paramètres",
             Support = "Soutenir AI Meter",
             Quit = "Quitter",
             RefreshNow = "Actualiser maintenant",
-            ShowOnTaskbar = "Afficher AI % dans la barre des tâches",
+            Label = "IA",
+            ShowOnTaskbar = "Afficher IA % dans la barre des tâches",
             StartWithWindows = "Démarrer avec Windows",
             StartupBlocked = "Windows a désactivé AI Meter au démarrage. Activez-le dans Paramètres › Applications › Démarrage.",
             StartupQuestion = "Démarrer AI Meter automatiquement à l’ouverture de session Windows ?\n\nVous pouvez changer cela à tout moment : faites un clic droit sur AI Meter dans la barre des tâches et choisissez Démarrer avec Windows.",
+            StartupOffInWindows = "Désactivé dans les paramètres Windows.",
+            StartupOnInWindows = "Activé par une stratégie de votre organisation.",
+            OpenStartupApps = "Ouvrir les paramètres des applications de démarrage ›",
             Version = "Version {0}",
             Tagline = "Un outil open source de GuruHat",
             Thanks = "Merci de soutenir ce projet !",
@@ -243,14 +263,18 @@ internal sealed record Strings
             UnavailableHint = "O horário de redefinição aparece quando o uso puder ser lido.",
             Troubleshooting = "Abrir o guia de solução de problemas ›",
             Refresh = "Atualizar",
-            About = "Sobre o AI Meter",
+            Settings = "Configurações",
             Support = "Apoiar o AI Meter",
             Quit = "Sair",
             RefreshNow = "Atualizar agora",
-            ShowOnTaskbar = "Mostrar AI % na barra de tarefas",
+            Label = "IA",
+            ShowOnTaskbar = "Mostrar IA % na barra de tarefas",
             StartWithWindows = "Iniciar com o Windows",
             StartupBlocked = "O Windows desativou o AI Meter na inicialização. Ative-o em Configurações › Aplicativos › Inicialização.",
             StartupQuestion = "Iniciar o AI Meter automaticamente ao entrar no Windows?\n\nVocê pode mudar isso quando quiser: clique com o botão direito no AI Meter na barra de tarefas e escolha Iniciar com o Windows.",
+            StartupOffInWindows = "Desativado nas configurações do Windows.",
+            StartupOnInWindows = "Ativado pela política da sua organização.",
+            OpenStartupApps = "Abrir configurações de aplicativos de inicialização ›",
             Version = "Versão {0}",
             Tagline = "Uma ferramenta de código aberto da GuruHat",
             Thanks = "Obrigado por apoiar este projeto!",
@@ -290,7 +314,7 @@ internal sealed record Strings
             UnavailableHint = "使用状況を読み取れるとリセット時刻が表示されます。",
             Troubleshooting = "トラブルシューティング ガイドを開く ›",
             Refresh = "更新",
-            About = "AI Meter について",
+            Settings = "設定",
             Support = "AI Meter を支援",
             Quit = "終了",
             RefreshNow = "今すぐ更新",
@@ -298,6 +322,9 @@ internal sealed record Strings
             StartWithWindows = "Windows の起動時に開始",
             StartupBlocked = "Windows のスタートアップで AI Meter がオフになっています。[設定] › [アプリ] › [スタートアップ] でオンにしてください。",
             StartupQuestion = "Windows にサインインしたときに AI Meter を自動的に開始しますか?\n\nこの設定はいつでも変更できます。タスクバーの AI Meter を右クリックし、[Windows の起動時に開始] を選んでください。",
+            StartupOffInWindows = "Windows の設定でオフになっています。",
+            StartupOnInWindows = "組織のポリシーによりオンになっています。",
+            OpenStartupApps = "スタートアップ アプリの設定を開く ›",
             Version = "バージョン {0}",
             Tagline = "GuruHat のオープンソース ツール",
             Thanks = "このプロジェクトを支援していただきありがとうございます！",
@@ -337,7 +364,7 @@ internal sealed record Strings
             UnavailableHint = "读取到用量后将显示重置时间。",
             Troubleshooting = "打开故障排除指南 ›",
             Refresh = "刷新",
-            About = "关于 AI Meter",
+            Settings = "设置",
             Support = "支持 AI Meter",
             Quit = "退出",
             RefreshNow = "立即刷新",
@@ -345,6 +372,9 @@ internal sealed record Strings
             StartWithWindows = "开机时启动",
             StartupBlocked = "Windows 已在启动时关闭 AI Meter。请在“设置 › 应用 › 启动”中将其打开。",
             StartupQuestion = "登录 Windows 时自动启动 AI Meter 吗？\n\n你可以随时更改：在任务栏上右键单击 AI Meter，然后选择“开机时启动”。",
+            StartupOffInWindows = "已在 Windows 设置中关闭。",
+            StartupOnInWindows = "已由你的组织策略打开。",
+            OpenStartupApps = "打开启动应用设置 ›",
             Version = "版本 {0}",
             Tagline = "GuruHat 开源工具",
             Thanks = "感谢你对本项目的支持！",
@@ -384,7 +414,7 @@ internal sealed record Strings
             UnavailableHint = "사용량을 읽을 수 있으면 초기화 시간이 표시됩니다.",
             Troubleshooting = "문제 해결 가이드 열기 ›",
             Refresh = "새로 고침",
-            About = "AI Meter 정보",
+            Settings = "설정",
             Support = "AI Meter 후원하기",
             Quit = "종료",
             RefreshNow = "지금 새로 고침",
@@ -392,6 +422,9 @@ internal sealed record Strings
             StartWithWindows = "Windows 시작 시 실행",
             StartupBlocked = "Windows 시작 시 AI Meter가 꺼져 있습니다. 설정 › 앱 › 시작 프로그램에서 켜세요.",
             StartupQuestion = "Windows에 로그인할 때 AI Meter를 자동으로 시작할까요?\n\n언제든지 바꿀 수 있습니다. 작업 표시줄에서 AI Meter를 마우스 오른쪽 단추로 클릭하고 Windows 시작 시 실행을 선택하세요.",
+            StartupOffInWindows = "Windows 설정에서 꺼져 있습니다.",
+            StartupOnInWindows = "조직 정책에 의해 켜져 있습니다.",
+            OpenStartupApps = "시작 앱 설정 열기 ›",
             Version = "버전 {0}",
             Tagline = "GuruHat 오픈 소스 도구",
             Thanks = "이 프로젝트를 후원해 주셔서 감사합니다!",
