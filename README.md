@@ -6,7 +6,7 @@
 
 No account, no analytics; your token only goes to Anthropic or OpenAI.
 
-![AI Meter on the Windows taskbar showing 79% of Codex usage remaining and when it resets](docs/ai-meter-tray.png)
+![AI Meter on the Windows taskbar: 79% of the Codex 5-hour limit and 34% of the weekly limit left, with reset times](docs/ai-meter-tray.png)
 
 AI Meter is a free, open-source GuruHat tray app. It shows how much of your current usage window is left as "AI 79%" on the taskbar, next to the system tray (black on a light taskbar, white on a dark one) and shows when the window resets. It refreshes every five minutes using the sign-in you already have.
 
