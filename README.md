@@ -13,7 +13,7 @@ AI Meter is a free, open-source GuruHat tray app. It shows how much of your curr
 - **Claude:** the five-hour window, using the Claude Code sign-in in `%USERPROFILE%\.claude\.credentials.json` (or `CLAUDE_CONFIG_DIR`).
 - **Codex:** your current allowance, using the ChatGPT sign-in the Codex CLI saves in `%USERPROFILE%\.codex\auth.json` (or `CODEX_HOME`).
 
-Website: https://guruhat.com/apps/ai-meter/ · macOS version: https://github.com/getguruhat/ai-meter
+Website: https://guruhat.com/apps/ai-meter/?ref=readme-win · macOS version: https://github.com/getguruhat/ai-meter
 
 ## Download
 
