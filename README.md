@@ -46,6 +46,10 @@ GitHub Actions builds the installer with Inno Setup on every push. Pushing a `v*
 
 The same build also makes `AI-Meter-<version>-x64.msix` (the **AI-Meter-Windows-msix** artifact) from `msix/AppxManifest.xml`, then test-installs it on the runner. Upload that file to Partner Center as is: the Store signs it when it publishes. The `Identity` and `PublisherDisplayName` in the manifest must match Partner Center's **Product identity** page. In the packaged app, **Start with Windows** uses the package's startup task instead of the registry, and Windows removes the app's settings when it's uninstalled.
 
+## Questions and ideas
+
+Ask in [Discussions](https://github.com/getguruhat/ai-meter-windows/discussions), and report bugs in [Issues](https://github.com/getguruhat/ai-meter-windows/issues). If AI Meter is useful, star the [main project page](https://github.com/getguruhat/ai-meter).
+
 ## License
 
 MIT. AI Meter is an independent project and is not affiliated with Anthropic or OpenAI.
