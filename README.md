@@ -15,6 +15,8 @@ AI Meter is a free, open-source GuruHat tray app. It shows how much of your curr
 
 Website: https://guruhat.com/apps/ai-meter/?ref=readme-win · macOS version: https://github.com/getguruhat/ai-meter
 
+Guides: [how to check your Claude Code usage limit](https://guruhat.com/guides/check-claude-code-usage-limit/?ref=readme-win) · [how to check your Codex usage limit](https://guruhat.com/guides/check-codex-usage-limit/?ref=readme-win)
+
 ## Download
 
 Get `AI-Meter-<version>-Windows-Setup.exe` from the [latest release](../../releases/latest). The installer runs without administrator rights and installs to `%LOCALAPPDATA%\Programs`.
